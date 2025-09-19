@@ -1,0 +1,43 @@
+# ==============================
+# .NET Core / ASP.NET Ignore
+# ==============================
+bin/
+obj/
+*.dll
+*.exe
+*.pdb
+*.log
+*.db
+*.cache
+*.config
+*.vs/
+.vscode/
+*.user
+*.suo
+
+# Dotnet publish / runtime artifacts
+publish/
+out/
+GeneratedFiles/
+*.nupkg
+*.snupkg
+
+# ==============================
+# React / Node Ignore
+# ==============================
+node_modules/
+dist/
+build/
+*.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# ==============================
+# OS / Editor Junk
+# ==============================
+.DS_Store
+Thumbs.db
+*.swp
+*.idea/

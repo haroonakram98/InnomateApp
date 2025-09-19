@@ -1,0 +1,40 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InnomateApp.API", "InnomateApp.API\InnomateApp.API.csproj", "{57646D00-0216-4AF0-A6D9-CD3D1DD12661}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InnomateApp.Application", "InnomateApp.Application\InnomateApp.Application.csproj", "{8100B438-D6B7-40A7-AFAF-E53F453ADAD6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InnomateApp.Domain", "InnomateApp.Domain\InnomateApp.Domain.csproj", "{D58BEB88-9BAF-4DDD-A4BA-7A290BF80319}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InnomateApp.Infrastructure", "InnomateApp.Infrastructure\InnomateApp.Infrastructure.csproj", "{1EF6591A-36A7-4E91-A3E1-33F446015707}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{57646D00-0216-4AF0-A6D9-CD3D1DD12661}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{57646D00-0216-4AF0-A6D9-CD3D1DD12661}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{57646D00-0216-4AF0-A6D9-CD3D1DD12661}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{57646D00-0216-4AF0-A6D9-CD3D1DD12661}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8100B438-D6B7-40A7-AFAF-E53F453ADAD6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8100B438-D6B7-40A7-AFAF-E53F453ADAD6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8100B438-D6B7-40A7-AFAF-E53F453ADAD6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8100B438-D6B7-40A7-AFAF-E53F453ADAD6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D58BEB88-9BAF-4DDD-A4BA-7A290BF80319}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D58BEB88-9BAF-4DDD-A4BA-7A290BF80319}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D58BEB88-9BAF-4DDD-A4BA-7A290BF80319}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D58BEB88-9BAF-4DDD-A4BA-7A290BF80319}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1EF6591A-36A7-4E91-A3E1-33F446015707}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1EF6591A-36A7-4E91-A3E1-33F446015707}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1EF6591A-36A7-4E91-A3E1-33F446015707}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1EF6591A-36A7-4E91-A3E1-33F446015707}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
