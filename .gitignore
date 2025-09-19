@@ -1,43 +1,48 @@
 # ==============================
-# .NET Core / ASP.NET Ignore
+# Visual Studio / .NET Core
 # ==============================
-bin/
-obj/
-*.dll
-*.exe
-*.pdb
-*.log
-*.db
-*.cache
-*.config
-*.vs/
-.vscode/
+.vs/
 *.user
 *.suo
+*.cache
+*.log
 
-# Dotnet publish / runtime artifacts
-publish/
-out/
-GeneratedFiles/
+# Build artifacts
+backend/**/bin/
+backend/**/obj/
+backend/**/out/
+backend/**/publish/
+
+# NuGet
 *.nupkg
 *.snupkg
+*.nuspec
+packages/
+
+# Configuration
+*.config
+*.db
+*.pdb
 
 # ==============================
-# React / Node Ignore
+# React / Node.js
 # ==============================
-node_modules/
-dist/
-build/
-*.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+frontend/innomateapp-ui/node_modules/
+frontend/innomateapp-ui/dist/
+frontend/innomateapp-ui/build/
+
+# Local environment files
+frontend/innomateapp-ui/.env
+frontend/innomateapp-ui/.env.local
+frontend/innomateapp-ui/.env.development.local
+frontend/innomateapp-ui/.env.test.local
+frontend/innomateapp-ui/.env.production.local
 
 # ==============================
-# OS / Editor Junk
+# OS / Editor junk
 # ==============================
 .DS_Store
 Thumbs.db
 *.swp
 *.idea/
+.vscode/
