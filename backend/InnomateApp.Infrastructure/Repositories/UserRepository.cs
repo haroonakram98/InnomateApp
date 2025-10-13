@@ -56,5 +56,14 @@ namespace InnomateApp.Infrastructure.Repositories
             await _context.SaveChangesAsync();
             return true;
         }
+
+        public async Task UpdateLastLoginAsync(int userId, DateTime timestamp)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync( user => user.Id == userId);
+            if (user == null) return;
+
+            user.LastLoginAt = timestamp;
+            await _context.SaveChangesAsync();
+        }
     }
 }

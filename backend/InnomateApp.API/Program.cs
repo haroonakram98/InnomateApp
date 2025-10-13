@@ -1,16 +1,16 @@
 ﻿using InnomateApp.API.Middleware;
-using InnomateApp.Infrastructure.Logging;
-using Microsoft.OpenApi.Models;
-using Microsoft.Extensions.DependencyInjection;
-using Swashbuckle.AspNetCore.SwaggerGen;
-using Microsoft.EntityFrameworkCore;
-using InnomateApp.Infrastructure.Persistence;
 using InnomateApp.Application.Interfaces;
 using InnomateApp.Application.Services;
+using InnomateApp.Infrastructure.Logging;
+using InnomateApp.Infrastructure.Persistence;
 using InnomateApp.Infrastructure.Repositories;
 using InnomateApp.Infrastructure.Security;
-using System.Text;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
+using Swashbuckle.AspNetCore.SwaggerGen;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,16 +19,27 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // DI Services
-builder.Services.AddScoped<IUserRepository, UserRepository>();
+// Application layer services
+builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+
+
+
+// Infrastructure repositories
+builder.Services.AddScoped<IRoleRepository, RoleRepository>();
+builder.Services.AddScoped<IPermissionRepository, PermissionRepository>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 builder.Services.AddScoped<IPasswordHasher, BcryptPasswordHasher>();
-
 // audit sink as background service + interface
 builder.Services.AddSingleton<AuditSink>();
 builder.Services.AddSingleton<IAuditSink>(sp => sp.GetRequiredService<AuditSink>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<AuditSink>());
+
+builder.Services.AddSingleton<ILoginUpdateQueue, InMemoryLoginUpdateQueue>();
+builder.Services.AddHostedService<LoginUpdateWorker>();
+
 
 // JWT Config
 var jwtKey = builder.Configuration["Jwt:Key"]

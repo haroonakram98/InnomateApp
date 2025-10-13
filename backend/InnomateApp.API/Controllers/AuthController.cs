@@ -24,7 +24,11 @@ namespace InnomateApp.API.Controllers
         public async Task<IActionResult> Login(LoginDto loginDto)
         {
             var result = await _authService.LoginAsync(loginDto);
-            if (result == null) return Unauthorized("Invalid credentials");
+            if (result == null)
+            {
+                //await _authService.UpdateFailedLoginAsync(loginDto.Email);
+                return Unauthorized("Invalid credentials");
+            }
 
             return Ok(result);
         }

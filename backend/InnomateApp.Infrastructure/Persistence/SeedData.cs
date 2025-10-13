@@ -25,9 +25,10 @@ namespace InnomateApp.Infrastructure.Persistence
                 // ✅ Seed Permissions (add more as needed)
                 var permissions = new[]
                 {
-                new Permission { Name = "Manage Users", Code = "USERS_MANAGE" },
-                new Permission { Name = "View Reports", Code = "REPORTS_VIEW" }
-            };
+                    new Permission { Name = "Manage Users", Code = "USERS_MANAGE" },
+                    new Permission { Name = "View Reports", Code = "REPORTS_VIEW" },
+                    new Permission { Name = "EditUsers", Code = "USERS_EDIT" }
+                };
                 context.Permissions.AddRange(permissions);
                 context.SaveChanges();
 

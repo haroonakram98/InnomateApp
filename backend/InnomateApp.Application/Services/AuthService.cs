@@ -11,11 +11,14 @@ namespace InnomateApp.Application.Services
     {
         private readonly IUserRepository _userRepository;
         private readonly IJwtTokenGenerator _jwtTokenGenerator;
+        private readonly ILoginUpdateQueue _loginUpdateQueue;
 
-        public AuthService(IUserRepository userRepository, IJwtTokenGenerator jwtTokenGenerator)
+
+        public AuthService(IUserRepository userRepository, IJwtTokenGenerator jwtTokenGenerator, ILoginUpdateQueue loginUpdateQueue)
         {
             _userRepository = userRepository;
             _jwtTokenGenerator = jwtTokenGenerator;
+            _loginUpdateQueue = loginUpdateQueue;
         }
 
         public async Task<AuthResponseDto?> LoginAsync(LoginDto loginDto)
@@ -26,8 +29,15 @@ namespace InnomateApp.Application.Services
             bool isValid = BCrypt.Net.BCrypt.Verify(loginDto.Password, user.PasswordHash);
             if (!isValid) return null;
 
+            // Update last login WITHOUT blocking the login flow
+            //await _userRepository.UpdateLastLoginAsync(user.Id, DateTime.UtcNow);
+
+            //  Non - blocking login timestamp update
+            _ = _loginUpdateQueue.EnqueueAsync(user.Id);
+
             var token = _jwtTokenGenerator.GenerateToken(user);
 
+            
 
             return new AuthResponseDto
             {
