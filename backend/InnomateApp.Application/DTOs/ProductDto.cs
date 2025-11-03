@@ -16,6 +16,10 @@ namespace InnomateApp.Application.DTOs
         public int ReorderLevel { get; set; }
         public bool IsActive { get; set; }
         public decimal? StockBalance { get; set; }
+
+        // Add these(from StockSummary)
+        public decimal AverageCost { get; set; }
+        public decimal TotalValue { get; set; }
     }
 
     public class CreateProductDto

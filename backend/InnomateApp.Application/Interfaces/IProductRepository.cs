@@ -11,5 +11,6 @@ namespace InnomateApp.Application.Interfaces
     {
         Task<Product?> GetByIdWithCategoryAsync(int id);
         Task<IEnumerable<Product>> GetAllWithStockAsync();
+        Task<Product?> GetByIdWithStockAsync(int id);
     }
 }

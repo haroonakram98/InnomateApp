@@ -6,6 +6,7 @@ import {
   LogOut,
   Users,
   BarChart3,
+  Box,
   Moon,
   Sun,
 } from "lucide-react";
@@ -25,11 +26,17 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   };
 
   const menu = [
-    { icon: <LayoutDashboard size={18} />, label: "Dashboard" },
-    { icon: <Users size={18} />, label: "Customers" },
-    { icon: <BarChart3 size={18} />, label: "Reports" },
-    { icon: <Settings size={18} />, label: "Settings" },
+    { icon: <LayoutDashboard size={18} />, label: "Dashboard", path: "/" },
+    { icon: <Users size={18} />, label: "Customers", path: "/customers" },
+    { icon: <BarChart3 size={18} />, label: "Reports", path: "/reports" },
+    { icon: <Box size={18} />, label: "Products", path: "/products" }, // Added Product menu
+    { icon: <Settings size={18} />, label: "Settings", path: "/settings" },
   ];
+
+  const handleMenuClick = (path: string) => {
+    navigate(path);
+    setSidebarOpen(false);
+  };
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
@@ -52,6 +59,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           {menu.map((m) => (
             <button
               key={m.label}
+              onClick={() => handleMenuClick(m.path)}
               className="flex items-center gap-3 px-3 py-2 text-gray-700 dark:text-gray-300 rounded-md hover:bg-blue-50 dark:hover:bg-gray-800"
             >
               {m.icon}

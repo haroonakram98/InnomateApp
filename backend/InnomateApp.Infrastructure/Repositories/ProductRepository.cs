@@ -5,14 +5,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace InnomateApp.Infrastructure.Repositories
 {
-    public class ProductRepository : IProductRepository
+    public class ProductRepository : GenericRepository<Product>, IProductRepository
     {
-        private readonly AppDbContext _context;
-
-        public ProductRepository(AppDbContext context)
-        {
-            _context = context;
-        }
+        public ProductRepository(AppDbContext context) : base(context) { }
 
         public async Task<IEnumerable<Product>> GetAllAsync() =>
             await _context.Products.Include(p => p.Category).ToListAsync();
@@ -44,6 +39,13 @@ namespace InnomateApp.Infrastructure.Repositories
         public void Delete(Product entity)
         {
             _context.Products.Remove(entity);
+        }
+
+        public async Task<Product?> GetByIdWithStockAsync(int id)
+        {
+            return await _context.Products
+                .Include(p => p.StockSummary)
+                .FirstOrDefaultAsync(p => p.ProductId == id);
         }
 
         public async Task<int> SaveChangesAsync() => await _context.SaveChangesAsync();

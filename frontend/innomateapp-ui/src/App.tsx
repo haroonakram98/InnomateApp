@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useAuthStore } from "@/store/useAuthStore.js";
 import AuthPage from "@/features/auth/AuthPage.js";
 import DashboardPage from "@/pages/DashboardPage.js";
+import ProductsPage from "./pages/ProductsPage.js";
 
 function App() {
   const { isAuthenticated, user, checkToken } = useAuthStore();
@@ -10,9 +11,6 @@ function App() {
   useEffect(() => {
     checkToken();
   }, [checkToken]);
-
-  console.log("isAuthenticated:", isAuthenticated);
-  console.log("user:", user);
 
   return (
     <BrowserRouter>
@@ -25,9 +23,15 @@ function App() {
 
         {/* Protected Route */}
         <Route
-          path="/*"
+          path="/"
           element={
             isAuthenticated ? <DashboardPage /> : <Navigate to="/login" replace />
+          }
+        />
+        <Route
+          path="/products"
+          element={
+            isAuthenticated ? <ProductsPage /> : <Navigate to="/login" replace />
           }
         />
       </Routes>

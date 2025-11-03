@@ -24,7 +24,7 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
 
       login: (data: AuthResponse) => {
-        debugger;
+
         // clear any old timer
         if (logoutTimer) clearTimeout(logoutTimer);
 
@@ -64,8 +64,8 @@ export const useAuthStore = create<AuthState>()(
         try {
           const decoded = jwtDecode<DecodedToken>(token);
           const now = Date.now() / 1000; // current time in seconds
-console.log(decoded.exp)
-console.log(now)
+          console.log(decoded.exp)
+          console.log(now)
           if (decoded.exp && decoded.exp < now) {
             console.warn("JWT expired → logging out");
             set({
