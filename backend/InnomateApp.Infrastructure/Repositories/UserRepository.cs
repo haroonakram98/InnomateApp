@@ -59,7 +59,7 @@ namespace InnomateApp.Infrastructure.Repositories
 
         public async Task UpdateLastLoginAsync(int userId, DateTime timestamp)
         {
-            var user = await _context.Users.FirstOrDefaultAsync( user => user.Id == userId);
+            var user = await _context.Users.FirstOrDefaultAsync( user => user.UserId == userId);
             if (user == null) return;
 
             user.LastLoginAt = timestamp;

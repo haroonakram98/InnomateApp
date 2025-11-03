@@ -18,7 +18,6 @@ const RegisterForm = () => {
     setError("");
     try {
       const response = await register({ userName, email, password });
-      debugger;
       setAuth(response);
     } catch {
       setError("Registration failed. Try again.");
@@ -28,13 +27,34 @@ const RegisterForm = () => {
   };
 
   return (
-    <form className="space-y-4" onSubmit={handleSubmit}>
-      <h2 className="text-2xl font-bold text-center">Register</h2>
-      <Input label="Name" value={userName} onChange={(e) => setUserName(e.target.value)} required />
-      <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-      <Input label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <h2 className="text-2xl font-bold text-center text-gray-800 dark:text-gray-200">
+        Register
+      </h2>
+      <Input
+        label="Name"
+        value={userName}
+        onChange={(e) => setUserName(e.target.value)}
+        required
+      />
+      <Input
+        label="Email"
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        required
+      />
+      <Input
+        label="Password"
+        type="password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        required
+      />
       {error && <p className="text-sm text-red-500 text-center">{error}</p>}
-      <Button type="submit" loading={loading}>Register</Button>
+      <Button type="submit" loading={loading} fullWidth>
+        Register
+      </Button>
     </form>
   );
 };

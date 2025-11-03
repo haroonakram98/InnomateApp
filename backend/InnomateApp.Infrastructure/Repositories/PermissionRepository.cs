@@ -17,7 +17,7 @@ public class PermissionRepository : IPermissionRepository
     public async Task<IEnumerable<Permission>> GetByIdsAsync(IEnumerable<int> ids)
     {
         return await _context.Permissions
-            .Where(p => ids.Contains(p.Id))
+            .Where(p => ids.Contains(p.PermissionId))
             .ToListAsync();
     }
 }

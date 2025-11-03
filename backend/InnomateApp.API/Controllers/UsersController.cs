@@ -36,13 +36,13 @@ public class UsersController : ControllerBase
     public async Task<IActionResult> Create(User user)
     {
         await _userService.CreateUserAsync(user);
-        return CreatedAtAction(nameof(GetById), new { id = user.Id }, user);
+        return CreatedAtAction(nameof(GetById), new { id = user.UserId }, user);
     }
 
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, User user)
     {
-        if (id != user.Id) return BadRequest();
+        if (id != user.UserId) return BadRequest();
         await _userService.UpdateUserAsync(user);
         return NoContent();
     }

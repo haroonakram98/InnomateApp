@@ -1,5 +1,6 @@
 ﻿using InnomateApp.API.Middleware;
 using InnomateApp.Application.Interfaces;
+using InnomateApp.Application.Mappings;
 using InnomateApp.Application.Services;
 using InnomateApp.Infrastructure.Logging;
 using InnomateApp.Infrastructure.Persistence;
@@ -39,7 +40,7 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<AuditSink>());
 
 builder.Services.AddSingleton<ILoginUpdateQueue, InMemoryLoginUpdateQueue>();
 builder.Services.AddHostedService<LoginUpdateWorker>();
-
+builder.Services.AddAutoMapper(typeof(MappingProfile));
 
 // JWT Config
 var jwtKey = builder.Configuration["Jwt:Key"]

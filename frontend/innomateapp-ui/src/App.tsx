@@ -1,26 +1,37 @@
 import { useEffect } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useAuthStore } from "@/store/useAuthStore.js";
 import AuthPage from "@/features/auth/AuthPage.js";
+import DashboardPage from "@/pages/DashboardPage.js";
 
 function App() {
   const { isAuthenticated, user, checkToken } = useAuthStore();
 
-  // Run expiry check once when the app loads
   useEffect(() => {
     checkToken();
   }, [checkToken]);
 
-  console.log("isAuthenticated: ");
-console.log(isAuthenticated);
-console.log("user: ");
-console.log(user);
-  return isAuthenticated ? (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold">Welcome, {user?.userName}</h1>
-      <p>Your email: {user?.email}</p>
-    </div>
-  ) : (
-    <AuthPage />
+  console.log("isAuthenticated:", isAuthenticated);
+  console.log("user:", user);
+
+  return (
+    <BrowserRouter>
+      <Routes>
+        {/* Public Route */}
+        <Route
+          path="/login"
+          element={!isAuthenticated ? <AuthPage /> : <Navigate to="/" replace />}
+        />
+
+        {/* Protected Route */}
+        <Route
+          path="/*"
+          element={
+            isAuthenticated ? <DashboardPage /> : <Navigate to="/login" replace />
+          }
+        />
+      </Routes>
+    </BrowserRouter>
   );
 }
 

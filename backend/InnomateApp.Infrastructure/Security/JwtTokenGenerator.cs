@@ -26,12 +26,12 @@ namespace InnomateApp.Infrastructure.Security
             var claims = new[]
             {
                 // Standard JWT Claims
-                new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+                new Claim(JwtRegisteredClaimNames.Sub, user.UserId.ToString()),
                 new Claim(JwtRegisteredClaimNames.UniqueName, user.Username ?? string.Empty),
                 new Claim(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
 
                 // Explicit .NET Identity-Compatible Claims
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
                 new Claim(ClaimTypes.Name, user.Username ?? string.Empty),
                 new Claim(ClaimTypes.Email, user.Email ?? string.Empty)
             };

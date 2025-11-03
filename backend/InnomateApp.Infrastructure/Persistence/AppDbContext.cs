@@ -1,4 +1,4 @@
-using InnomateApp.Domain.Entities;
+﻿using InnomateApp.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace InnomateApp.Infrastructure.Persistence
@@ -12,29 +12,185 @@ namespace InnomateApp.Infrastructure.Persistence
         public DbSet<Permission> Permissions => Set<Permission>();
         public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
+        public DbSet<Category> Categories => Set<Category>();
+        public DbSet<Product> Products => Set<Product>();
+        public DbSet<Supplier> Suppliers => Set<Supplier>();
+        public DbSet<Purchase> Purchases => Set<Purchase>();
+        public DbSet<PurchaseDetail> PurchaseDetails => Set<PurchaseDetail>();
+        public DbSet<Sale> Sales => Set<Sale>();
+        public DbSet<SaleDetail> SaleDetails => Set<SaleDetail>();
+        public DbSet<StockTransaction> StockTransactions => Set<StockTransaction>();
+        public DbSet<StockSummary> StockSummaries => Set<StockSummary>();
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
-            // Many-to-Many: User <-> Role
+            // 🔹 Many-to-Many: User <-> Role
             modelBuilder.Entity<User>()
                 .HasMany(u => u.Roles)
                 .WithMany(r => r.Users);
 
-            // Many-to-Many: Role <-> Permission
+            // 🔹 Many-to-Many: Role <-> Permission
             modelBuilder.Entity<Role>()
                 .HasMany(r => r.Permissions)
                 .WithMany(p => p.Roles);
-            // Configure User entity
+
+            // 🔹 User configuration
             modelBuilder.Entity<User>(entity =>
             {
-                entity.HasKey(e => e.Id);
+                entity.HasKey(e => e.UserId);
                 entity.Property(e => e.Username).IsRequired().HasMaxLength(100);
                 entity.Property(e => e.Email).IsRequired().HasMaxLength(200);
                 entity.Property(e => e.PasswordHash).IsRequired();
                 entity.Property(e => e.CreatedAt).IsRequired();
             });
 
+            // =====================================================
+            // 🧩 Stock & Sales Management Relationships
+            // =====================================================
+
+            modelBuilder.Entity<Category>().HasKey(c => c.CategoryId);
+            modelBuilder.Entity<Product>().HasKey(p => p.ProductId);
+            modelBuilder.Entity<Supplier>().HasKey(s => s.SupplierId);
+            modelBuilder.Entity<Purchase>().HasKey(p => p.PurchaseId);
+            modelBuilder.Entity<PurchaseDetail>().HasKey(pd => pd.PurchaseDetailId);
+            modelBuilder.Entity<Sale>().HasKey(s => s.SaleId);
+            modelBuilder.Entity<SaleDetail>().HasKey(sd => sd.SaleDetailId);
+            modelBuilder.Entity<StockTransaction>().HasKey(st => st.StockTransactionId);
+            modelBuilder.Entity<StockSummary>().HasKey(ss => ss.StockSummaryId);
+
+            // 🔹 Category → Product (1:N)
+            modelBuilder.Entity<Product>()
+                .HasOne(p => p.Category)
+                .WithMany(c => c.Products)
+                .HasForeignKey(p => p.CategoryId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // 🔹 Supplier → Purchase (1:N)
+            modelBuilder.Entity<Purchase>()
+                .HasOne(p => p.Supplier)
+                .WithMany(s => s.Purchases)
+                .HasForeignKey(p => p.SupplierId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // 🔹 Purchase → PurchaseDetail (1:N)
+            modelBuilder.Entity<PurchaseDetail>()
+                .HasOne(d => d.Purchase)
+                .WithMany(p => p.PurchaseDetails)
+                .HasForeignKey(d => d.PurchaseId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // 🔹 Product → PurchaseDetail (1:N)
+            modelBuilder.Entity<PurchaseDetail>()
+                .HasOne(d => d.Product)
+                .WithMany(p => p.PurchaseDetails)
+                .HasForeignKey(d => d.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // 🔹 Sale → SaleDetail (1:N)
+            modelBuilder.Entity<SaleDetail>()
+                .HasOne(d => d.Sale)
+                .WithMany(s => s.SaleDetails)
+                .HasForeignKey(d => d.SaleId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // 🔹 Product → SaleDetail (1:N)
+            modelBuilder.Entity<SaleDetail>()
+                .HasOne(d => d.Product)
+                .WithMany(p => p.SaleDetails)
+                .HasForeignKey(d => d.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // 🔹 FIFO link: SaleDetail → PurchaseDetail (optional, 1:N)
+            modelBuilder.Entity<SaleDetail>()
+                .HasOne(d => d.PurchaseDetail)
+                .WithMany()
+                .HasForeignKey(d => d.PurchaseDetailId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // 🔹 Product → StockTransaction (1:N)
+            modelBuilder.Entity<StockTransaction>()
+                .HasOne(st => st.Product)
+                .WithMany(p => p.StockTransactions)
+                .HasForeignKey(st => st.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // 🔹 Product → StockSummary (1:1)
+            modelBuilder.Entity<StockSummary>()
+                .HasKey(s => s.ProductId);
+
+            modelBuilder.Entity<Product>()
+                .HasOne(p => p.StockSummary)
+                .WithOne(s => s.Product)
+                .HasForeignKey<StockSummary>(s => s.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // ============================
+            // 💰 Precision Configuration (decimal 18,2)
+            // ============================
+
+            modelBuilder.Entity<Product>(entity =>
+            {
+                entity.Property(e => e.DefaultSalePrice).HasPrecision(18, 4);
+            });
+
+            modelBuilder.Entity<Purchase>(entity =>
+            {
+                entity.Property(e => e.TotalAmount).HasPrecision(18, 4);
+            });
+
+            modelBuilder.Entity<PurchaseDetail>(entity =>
+            {
+                entity.Property(e => e.Quantity).HasPrecision(18, 4);
+                entity.Property(e => e.UnitCost).HasPrecision(18, 4);
+                entity.Property(e => e.TotalCost).HasPrecision(18, 4);
+                entity.Property(e => e.RemainingQty).HasPrecision(18, 4);
+            });
+
+            modelBuilder.Entity<Sale>(entity =>
+            {
+                entity.Property(e => e.TotalAmount).HasPrecision(18, 4);
+            });
+
+            modelBuilder.Entity<SaleDetail>(entity =>
+            {
+                entity.Property(e => e.Quantity).HasPrecision(18, 4);
+                entity.Property(e => e.UnitPrice).HasPrecision(18, 4);
+                entity.Property(e => e.Total).HasPrecision(18, 4);
+            });
+
+            modelBuilder.Entity<StockTransaction>()
+                .Property(st => st.Quantity)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<StockTransaction>()
+                .Property(st => st.UnitCost)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<StockTransaction>()
+                .Property(st => st.TotalCost)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<StockSummary>()
+                .Property(ss => ss.TotalIn)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<StockSummary>()
+                .Property(ss => ss.TotalOut)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<StockSummary>()
+                .Property(ss => ss.Balance)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<StockSummary>()
+                .Property(ss => ss.AverageCost)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<StockSummary>()
+                .Property(ss => ss.TotalValue)
+                .HasPrecision(18, 2);
         }
     }
 }

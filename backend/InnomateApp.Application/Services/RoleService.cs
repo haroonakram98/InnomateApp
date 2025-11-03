@@ -63,7 +63,7 @@ public class RoleService : IRoleService
     // mapping helpers
     private static RoleDto MapToDto(Role r)
     {
-        var perms = r.Permissions?.Select(p => new PermissionDto(p.Id, p.Name, p.Code)) ?? Enumerable.Empty<PermissionDto>();
-        return new RoleDto(r.Id, r.Name, perms);
+        var perms = r.Permissions?.Select(p => new PermissionDto(p.PermissionId, p.Name, p.Code)) ?? Enumerable.Empty<PermissionDto>();
+        return new RoleDto(r.RoleId, r.Name, perms);
     }
 }

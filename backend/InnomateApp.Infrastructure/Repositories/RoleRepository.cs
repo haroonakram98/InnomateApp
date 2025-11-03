@@ -26,7 +26,7 @@ public class RoleRepository : IRoleRepository
     {
         return await _context.Roles
             .Include(r => r.Permissions)
-            .FirstOrDefaultAsync(r => r.Id == id);
+            .FirstOrDefaultAsync(r => r.RoleId == id);
     }
 
     public async Task<Role> AddAsync(Role role)
@@ -42,10 +42,10 @@ public class RoleRepository : IRoleRepository
         // To be safe here, attach if necessary:
         var tracked = await _context.Roles
             .Include(r => r.Permissions)
-            .FirstOrDefaultAsync(r => r.Id == role.Id);
+            .FirstOrDefaultAsync(r => r.RoleId == role.RoleId);
 
         if (tracked == null)
-            throw new InvalidOperationException($"Role with id {role.Id} not found.");
+            throw new InvalidOperationException($"Role with id {role.RoleId} not found.");
 
         // update scalar properties
         tracked.Name = role.Name;
@@ -55,7 +55,7 @@ public class RoleRepository : IRoleRepository
         foreach (var p in role.Permissions)
         {
             // Attach permission entity if not tracked
-            var perm = await _context.Permissions.FindAsync(p.Id);
+            var perm = await _context.Permissions.FindAsync(p.PermissionId);
             if (perm != null)
             {
                 tracked.Permissions.Add(perm);

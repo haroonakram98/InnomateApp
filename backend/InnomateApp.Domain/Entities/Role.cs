@@ -1,8 +1,12 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace InnomateApp.Domain.Entities;
 
 public class Role
 {
-    public int Id { get; set; }
+    [Key]
+    public int RoleId { get; set; }
+    [Required, MaxLength(100)]
     public string Name { get; set; } = string.Empty; // e.g., Admin, Manager, User
 
     // Navigation

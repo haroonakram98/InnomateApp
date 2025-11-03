@@ -33,7 +33,7 @@ namespace InnomateApp.Application.Services
             //await _userRepository.UpdateLastLoginAsync(user.Id, DateTime.UtcNow);
 
             //  Non - blocking login timestamp update
-            _ = _loginUpdateQueue.EnqueueAsync(user.Id);
+            _ = _loginUpdateQueue.EnqueueAsync(user.UserId);
 
             var token = _jwtTokenGenerator.GenerateToken(user);
 
@@ -44,7 +44,7 @@ namespace InnomateApp.Application.Services
                 Token = token,
                 User = new UserDto
                 {
-                    Id = user.Id.ToString(),   // adjust if Id is int/Guid
+                    Id = user.UserId.ToString(),   // adjust if Id is int/Guid
                     UserName = user.Username,
                     Email = user.Email
                 }
@@ -74,7 +74,7 @@ namespace InnomateApp.Application.Services
                 Token = token,
                 User = new UserDto
                 {
-                    Id = user.Id.ToString(),   // adjust if Id is int/Guid
+                    Id = user.UserId.ToString(),   // adjust if Id is int/Guid
                     UserName = user.Username,
                     Email = user.Email
                 }
