@@ -13,5 +13,5 @@ export interface ProductDTO {
 }
 
 // ✅ Separate request DTOs
-export type CreateProductDto = Omit<ProductDTO, "productId" | "isActive" | "categoryName" | "stockBalance" | "averageCost" | "totalValue">;
+export type CreateProductDto = Omit<ProductDTO, "productId" | "isActive" | "categoryId" | "stockBalance" | "averageCost" | "totalValue">;
 export type UpdateProductDto = Partial<CreateProductDto> & { productId: number };

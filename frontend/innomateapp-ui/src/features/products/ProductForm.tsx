@@ -3,9 +3,11 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useProductStore } from "../../store/useProductStore.js";
+import { useCategoryStore } from "@/store/useCategoryStore.js";
 import { CreateProductDto, ProductDTO } from "../../types/product.js";
 import Button from "@/components/ui/Button.js";
 import Input from "@/components/ui/Input.js";
+import Select from "@/components/ui/Select.js";
 // ✅ Zod schema for validation
 const productSchema = z.object({
   name: z.string().min(1, "Product name is required"),
@@ -23,12 +25,15 @@ interface Props {
 
 export default function ProductForm({ product, onSaved }: Props) {
   const { createProduct, updateProduct } = useProductStore();
+  const { categories, fetchCategories } = useCategoryStore();
   const [loading, setLoading] = useState(false);
-
+  const [initialized, setInitialized] = useState(false);
+  debugger
   const {
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
@@ -42,17 +47,7 @@ export default function ProductForm({ product, onSaved }: Props) {
     },
   });
 
-  useEffect(() => {
-    // Reset form when editing a new product
-    reset(product || {
-      name: "",
-      categoryId: 0,
-      defaultSalePrice: 0,
-      reorderLevel: 0,
-      isActive: true,
-      sku: "",
-    });
-  }, [product, reset]);
+  
 
   const onSubmit = async (data: ProductFormData) => {
     try {
@@ -72,6 +67,28 @@ export default function ProductForm({ product, onSaved }: Props) {
     }
   };
 
+  useEffect(() => {
+    (async () => {
+      await fetchCategories();
+      setInitialized(true);
+    })();
+  }, []);
+
+  
+  useEffect(() => {
+    if (categories.length === 0) return;
+    // Only reset form when categories are loaded to prevent flicker
+    
+      reset({
+        name: product?.name || "",
+        categoryId: product?.categoryId || 0,
+        defaultSalePrice: product?.defaultSalePrice || 0,
+        reorderLevel: product?.reorderLevel || 0,
+        sku: product?.sku || "",
+        isActive: product?.isActive ?? true,
+      });
+  }, [product, categories, reset]);
+
   return (
     <form
       onSubmit={handleSubmit(onSubmit)}
@@ -90,14 +107,19 @@ export default function ProductForm({ product, onSaved }: Props) {
       />
 
       {/* Category ID */}
-      <Input
-        label="Category ID"
-        type="number"
-        placeholder="Enter category ID"
+      <Select
+        label="Category"
         {...register("categoryId", { valueAsNumber: true })}
+        options={[
+          { value: 0, label: "Select Category" },
+          ...categories.map((c) => ({
+            value: c.categoryId,
+            label: c.name,
+          })),
+        ]}
+        value={watch("categoryId")}
         error={errors.categoryId?.message}
       />
-
       {/* SKU */}
       <Input
         label="SKU"

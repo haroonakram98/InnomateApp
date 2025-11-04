@@ -15,6 +15,8 @@ namespace InnomateApp.Application.Mappings
 
             CreateMap<CreateProductDto, Product>();
             CreateMap<UpdateProductDto, Product>();
+
+            CreateMap<Category,CategoryDto>();
         }
     }
 }

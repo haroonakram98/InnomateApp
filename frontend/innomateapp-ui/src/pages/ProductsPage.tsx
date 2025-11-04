@@ -23,6 +23,7 @@ export default function ProductsPage() {
   };
 
   const handleEdit = (product: any) => {
+    debugger
     setSelectedProduct(product);
     setModalOpen(true);
   };
