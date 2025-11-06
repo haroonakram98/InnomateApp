@@ -1,5 +1,8 @@
-﻿using InnomateApp.API.Middleware;
+﻿using AutoMapper;
+using InnomateApp.API.Middleware;
 using InnomateApp.Application.Interfaces;
+using InnomateApp.Application.Interfaces.Repositories;
+using InnomateApp.Application.Interfaces.Services;
 using InnomateApp.Application.Mappings;
 using InnomateApp.Application.Services;
 using InnomateApp.Infrastructure.Logging;
@@ -12,7 +15,6 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using System.Text;
-using AutoMapper;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,16 +29,21 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
-
+builder.Services.AddScoped<ICustomerService, CustomerService>();
+builder.Services.AddScoped<ISaleService, SaleService>();
 // Infrastructure repositories
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 builder.Services.AddScoped<IRoleRepository, RoleRepository>();
 builder.Services.AddScoped<IPermissionRepository, PermissionRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
-
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<ICategoryRepository,CategoryRepository>();
 builder.Services.AddScoped<IStockSummaryRepository, StockSummaryRepository>();
+builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
+builder.Services.AddScoped<ISaleRepository, SaleRepository>();
+builder.Services.AddScoped<ISaleDetailRepository, SaleDetailRepository>();
+builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
+
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 builder.Services.AddScoped<IPasswordHasher, BcryptPasswordHasher>();
 // audit sink as background service + interface

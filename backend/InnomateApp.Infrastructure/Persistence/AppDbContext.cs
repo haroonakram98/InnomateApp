@@ -1,5 +1,6 @@
 ﻿using InnomateApp.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
 
 namespace InnomateApp.Infrastructure.Persistence
 {
@@ -21,7 +22,12 @@ namespace InnomateApp.Infrastructure.Persistence
         public DbSet<SaleDetail> SaleDetails => Set<SaleDetail>();
         public DbSet<StockTransaction> StockTransactions => Set<StockTransaction>();
         public DbSet<StockSummary> StockSummaries => Set<StockSummary>();
-
+        public DbSet<Customer> Customers => Set<Customer>();
+        public DbSet<Payment> Payments => Set<Payment>();
+        public DbSet<Setting> Settings => Set<Setting>();
+        public DbSet<Tax> Taxes => Set<Tax>();
+        public DbSet<Return> Returns => Set<Return>();
+        public DbSet<ReturnDetail> ReturnDetails => Set<ReturnDetail>();
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -191,6 +197,47 @@ namespace InnomateApp.Infrastructure.Persistence
             modelBuilder.Entity<StockSummary>()
                 .Property(ss => ss.TotalValue)
                 .HasPrecision(18, 2);
+            modelBuilder.Entity<Payment>()
+                .Property(p => p.Amount)
+                .HasPrecision(18, 4);
+
+            modelBuilder.Entity<Return>()
+                .Property(r => r.TotalRefund)
+                .HasPrecision(18, 4);
+
+            modelBuilder.Entity<ReturnDetail>()
+                .Property(rd => rd.Quantity)
+                .HasPrecision(18, 4);
+
+            modelBuilder.Entity<ReturnDetail>()
+                .Property(rd => rd.UnitPrice)
+                .HasPrecision(18, 4);
+
+            modelBuilder.Entity<ReturnDetail>()
+                .Property(rd => rd.Total)
+                .HasPrecision(18, 4);
+
+            modelBuilder.Entity<Tax>()
+                .Property(t => t.Rate)
+                .HasPrecision(5, 2);
+
+            modelBuilder.Entity<Sale>()
+                .HasOne(s => s.Customer)
+                .WithMany(c => c.Sales)
+                .HasForeignKey(s => s.CustomerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Payment>()
+                .HasOne(p => p.Sale)
+                .WithMany(s => s.Payments)
+                .HasForeignKey(p => p.SaleId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Return>()
+                .HasMany(r => r.ReturnDetails)
+                .WithOne(rd => rd.Return)
+                .HasForeignKey(rd => rd.ReturnId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

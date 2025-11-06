@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import {
   Menu,
   LayoutDashboard,
+  ShoppingCart,
   Settings,
   LogOut,
   Users,
@@ -27,6 +28,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   const menu = [
     { icon: <LayoutDashboard size={18} />, label: "Dashboard", path: "/" },
+    { icon: <ShoppingCart  size={18} />, label: "Sales", path: "/sales" },
     { icon: <Users size={18} />, label: "Customers", path: "/customers" },
     { icon: <BarChart3 size={18} />, label: "Reports", path: "/reports" },
     { icon: <Box size={18} />, label: "Products", path: "/products" }, // Added Product menu

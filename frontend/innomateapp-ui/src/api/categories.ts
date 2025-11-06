@@ -3,7 +3,7 @@ import { CategoryDTO } from "@/types/category.js";
 
 export const categoryApi = {
     getAll: async (): Promise<CategoryDTO[]> => {
-        const res = await axios.get("/v1/Categories");
+        const res = await axios.get("/Categories");
         return res.data;
     },
 };

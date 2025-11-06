@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace InnomateApp.API.Controllers
 {
     
-    [Route("api/v1/[controller]")]
+    [Route("api/[controller]")]
     [ApiController]
     public class CategoriesController : ControllerBase
     {

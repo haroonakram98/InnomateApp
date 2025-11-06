@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace InnomateApp.API.Controllers
 {
     [ApiController]
-    [Route("api/v1/[controller]")]
+    [Route("api/[controller]")]
     public class ProductController : ControllerBase
     {
         private readonly IProductService _service;

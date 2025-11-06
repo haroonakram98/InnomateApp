@@ -54,6 +54,51 @@ namespace InnomateApp.Infrastructure.Persistence
                 context.Users.Add(adminUser);
                 context.SaveChanges();
             }
+
+            if (!context.Customers.Any())
+            {
+                var customers = new List<Customer>
+                {
+                    new Customer
+                    {
+                        Name = "Ali Khan",
+                        Phone = "0300-1234567",
+                        Email = "ali.khan@example.com",
+                        Address = "House #24, Street 10, G-11/3, Islamabad"
+                    },
+                    new Customer
+                    {
+                        Name = "Sara Ahmed",
+                        Phone = "0321-9988776",
+                        Email = "sara.ahmed@example.com",
+                        Address = "Flat #5B, Gulshan-e-Iqbal, Karachi"
+                    },
+                    new Customer
+                    {
+                        Name = "Usman Raza",
+                        Phone = "0333-5556677",
+                        Email = "usman.raza@example.com",
+                        Address = "Street 8, Cavalry Ground, Lahore"
+                    },
+                    new Customer
+                    {
+                        Name = "Hina Malik",
+                        Phone = "0312-4445566",
+                        Email = "hina.malik@example.com",
+                        Address = "Sector F-10, Islamabad"
+                    },
+                    new Customer
+                    {
+                        Name = "Bilal Sheikh",
+                        Phone = "0345-7788990",
+                        Email = "bilal.sheikh@example.com",
+                        Address = "Model Town, Lahore"
+                    }
+                };
+
+                context.Customers.AddRangeAsync(customers);
+                context.SaveChangesAsync();
+            }
         }
     }
 }

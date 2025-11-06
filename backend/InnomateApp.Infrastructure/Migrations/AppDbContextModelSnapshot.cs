@@ -71,6 +71,66 @@ namespace InnomateApp.Infrastructure.Migrations
                     b.ToTable("Categories");
                 });
 
+            modelBuilder.Entity("InnomateApp.Domain.Entities.Customer", b =>
+                {
+                    b.Property<int>("CustomerId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CustomerId"));
+
+                    b.Property<string>("Address")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Email")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Phone")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("CustomerId");
+
+                    b.ToTable("Customers");
+                });
+
+            modelBuilder.Entity("InnomateApp.Domain.Entities.Payment", b =>
+                {
+                    b.Property<int>("PaymentId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PaymentId"));
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<DateTime>("PaymentDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PaymentMethod")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ReferenceNo")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("SaleId")
+                        .HasColumnType("int");
+
+                    b.HasKey("PaymentId");
+
+                    b.HasIndex("SaleId");
+
+                    b.ToTable("Payments");
+                });
+
             modelBuilder.Entity("InnomateApp.Domain.Entities.Permission", b =>
                 {
                     b.Property<int>("PermissionId")
@@ -210,6 +270,69 @@ namespace InnomateApp.Infrastructure.Migrations
                     b.ToTable("PurchaseDetails");
                 });
 
+            modelBuilder.Entity("InnomateApp.Domain.Entities.Return", b =>
+                {
+                    b.Property<int>("ReturnId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ReturnId"));
+
+                    b.Property<string>("Reason")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("ReturnDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("SaleId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("TotalRefund")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.HasKey("ReturnId");
+
+                    b.HasIndex("SaleId");
+
+                    b.ToTable("Returns");
+                });
+
+            modelBuilder.Entity("InnomateApp.Domain.Entities.ReturnDetail", b =>
+                {
+                    b.Property<int>("ReturnDetailId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ReturnDetailId"));
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Quantity")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<int>("ReturnId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Total")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.HasKey("ReturnDetailId");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("ReturnId");
+
+                    b.ToTable("ReturnDetails");
+                });
+
             modelBuilder.Entity("InnomateApp.Domain.Entities.Role", b =>
                 {
                     b.Property<int>("RoleId")
@@ -242,13 +365,13 @@ namespace InnomateApp.Infrastructure.Migrations
                     b.Property<int>("CreatedBy")
                         .HasColumnType("int");
 
-                    b.Property<string>("CustomerName")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("int");
 
                     b.Property<string>("InvoiceNo")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime>("SaleDate")
                         .HasColumnType("datetime2");
@@ -258,6 +381,8 @@ namespace InnomateApp.Infrastructure.Migrations
                         .HasColumnType("decimal(18,4)");
 
                     b.HasKey("SaleId");
+
+                    b.HasIndex("CustomerId");
 
                     b.ToTable("Sales");
                 });
@@ -300,6 +425,27 @@ namespace InnomateApp.Infrastructure.Migrations
                     b.HasIndex("SaleId");
 
                     b.ToTable("SaleDetails");
+                });
+
+            modelBuilder.Entity("InnomateApp.Domain.Entities.Setting", b =>
+                {
+                    b.Property<int>("SettingId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SettingId"));
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("SettingId");
+
+                    b.ToTable("Settings");
                 });
 
             modelBuilder.Entity("InnomateApp.Domain.Entities.StockSummary", b =>
@@ -415,6 +561,30 @@ namespace InnomateApp.Infrastructure.Migrations
                     b.ToTable("Suppliers");
                 });
 
+            modelBuilder.Entity("InnomateApp.Domain.Entities.Tax", b =>
+                {
+                    b.Property<int>("TaxId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("TaxId"));
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("Rate")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
+
+                    b.HasKey("TaxId");
+
+                    b.ToTable("Taxes");
+                });
+
             modelBuilder.Entity("InnomateApp.Domain.Entities.User", b =>
                 {
                     b.Property<int>("UserId")
@@ -478,6 +648,17 @@ namespace InnomateApp.Infrastructure.Migrations
                     b.ToTable("RoleUser");
                 });
 
+            modelBuilder.Entity("InnomateApp.Domain.Entities.Payment", b =>
+                {
+                    b.HasOne("InnomateApp.Domain.Entities.Sale", "Sale")
+                        .WithMany("Payments")
+                        .HasForeignKey("SaleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Sale");
+                });
+
             modelBuilder.Entity("InnomateApp.Domain.Entities.Product", b =>
                 {
                     b.HasOne("InnomateApp.Domain.Entities.Category", "Category")
@@ -517,6 +698,47 @@ namespace InnomateApp.Infrastructure.Migrations
                     b.Navigation("Product");
 
                     b.Navigation("Purchase");
+                });
+
+            modelBuilder.Entity("InnomateApp.Domain.Entities.Return", b =>
+                {
+                    b.HasOne("InnomateApp.Domain.Entities.Sale", "Sale")
+                        .WithMany()
+                        .HasForeignKey("SaleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Sale");
+                });
+
+            modelBuilder.Entity("InnomateApp.Domain.Entities.ReturnDetail", b =>
+                {
+                    b.HasOne("InnomateApp.Domain.Entities.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("InnomateApp.Domain.Entities.Return", "Return")
+                        .WithMany("ReturnDetails")
+                        .HasForeignKey("ReturnId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+
+                    b.Navigation("Return");
+                });
+
+            modelBuilder.Entity("InnomateApp.Domain.Entities.Sale", b =>
+                {
+                    b.HasOne("InnomateApp.Domain.Entities.Customer", "Customer")
+                        .WithMany("Sales")
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Customer");
                 });
 
             modelBuilder.Entity("InnomateApp.Domain.Entities.SaleDetail", b =>
@@ -602,6 +824,11 @@ namespace InnomateApp.Infrastructure.Migrations
                     b.Navigation("Products");
                 });
 
+            modelBuilder.Entity("InnomateApp.Domain.Entities.Customer", b =>
+                {
+                    b.Navigation("Sales");
+                });
+
             modelBuilder.Entity("InnomateApp.Domain.Entities.Product", b =>
                 {
                     b.Navigation("PurchaseDetails");
@@ -618,8 +845,15 @@ namespace InnomateApp.Infrastructure.Migrations
                     b.Navigation("PurchaseDetails");
                 });
 
+            modelBuilder.Entity("InnomateApp.Domain.Entities.Return", b =>
+                {
+                    b.Navigation("ReturnDetails");
+                });
+
             modelBuilder.Entity("InnomateApp.Domain.Entities.Sale", b =>
                 {
+                    b.Navigation("Payments");
+
                     b.Navigation("SaleDetails");
                 });
 

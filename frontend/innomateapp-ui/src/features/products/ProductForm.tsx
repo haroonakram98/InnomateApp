@@ -7,16 +7,19 @@ import { useCategoryStore } from "@/store/useCategoryStore.js";
 import { CreateProductDto, ProductDTO } from "../../types/product.js";
 import Button from "@/components/ui/Button.js";
 import Input from "@/components/ui/Input.js";
-import Select from "@/components/ui/Select.js";
+import { FormSelect } from "@/components/ui/Select.js";
+
 // ✅ Zod schema for validation
 const productSchema = z.object({
   name: z.string().min(1, "Product name is required"),
   categoryId: z.number().min(1, "Category is required"),
+  sku: z.string().optional(),
   defaultSalePrice: z.number().min(0, "Price must be >= 0"),
   reorderLevel: z.number().min(0, "Reorder level must be >= 0"),
+  isActive: z.boolean().default(true),
 });
 
-type ProductFormData = z.infer<typeof productSchema> & Partial<ProductDTO>;
+type ProductFormData = z.infer<typeof productSchema>;
 
 interface Props {
   product?: ProductDTO | null;
@@ -27,72 +30,81 @@ export default function ProductForm({ product, onSaved }: Props) {
   const { createProduct, updateProduct } = useProductStore();
   const { categories, fetchCategories } = useCategoryStore();
   const [loading, setLoading] = useState(false);
-  const [initialized, setInitialized] = useState(false);
-  debugger
+
   const {
     register,
     handleSubmit,
     reset,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
-    defaultValues: product || {
+    defaultValues: {
       name: "",
       categoryId: 0,
+      sku: "",
       defaultSalePrice: 0,
       reorderLevel: 0,
       isActive: true,
-      sku: "",
     },
   });
 
-  
+  // Fetch categories on mount
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
+
+  // Reset form when product changes
+  useEffect(() => {
+    if (product) {
+      reset({
+        name: product.name || "",
+        categoryId: product.categoryId || 0,
+        sku: product.sku || "",
+        defaultSalePrice: product.defaultSalePrice || 0,
+        reorderLevel: product.reorderLevel || 0,
+        isActive: product.isActive ?? true,
+      });
+    } else {
+      reset({
+        name: "",
+        categoryId: 0,
+        sku: "",
+        defaultSalePrice: 0,
+        reorderLevel: 0,
+        isActive: true,
+      });
+    }
+  }, [product, reset]);
 
   const onSubmit = async (data: ProductFormData) => {
     try {
       setLoading(true);
+      
       if (product?.productId) {
-        const { productId, ...restData } = data;
-        await updateProduct(product.productId, restData as ProductDTO);
+        // Update existing product
+        await updateProduct(product.productId, data as ProductDTO);
       } else {
-        await createProduct(data);
+        // Create new product
+        await createProduct(data as CreateProductDto);
       }
+      
+      // Reset form and notify parent
       reset();
       onSaved();
     } catch (err) {
       console.error("Error saving product:", err);
+      alert("Failed to save product. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    (async () => {
-      await fetchCategories();
-      setInitialized(true);
-    })();
-  }, []);
-
-  
-  useEffect(() => {
-    if (categories.length === 0) return;
-    // Only reset form when categories are loaded to prevent flicker
-    
-      reset({
-        name: product?.name || "",
-        categoryId: product?.categoryId || 0,
-        defaultSalePrice: product?.defaultSalePrice || 0,
-        reorderLevel: product?.reorderLevel || 0,
-        sku: product?.sku || "",
-        isActive: product?.isActive ?? true,
-      });
-  }, [product, categories, reset]);
-
   return (
     <form
       onSubmit={handleSubmit(onSubmit)}
-      className="space-y-4 bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border border-gray-200 max-w-lg mx-auto"
+      className="space-y-4 bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 max-w-lg mx-auto"
     >
       <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">
         {product ? "Update Product" : "Add Product"}
@@ -106,10 +118,10 @@ export default function ProductForm({ product, onSaved }: Props) {
         error={errors.name?.message}
       />
 
-      {/* Category ID */}
-      <Select
+      {/* Category */}
+      <FormSelect
         label="Category"
-        {...register("categoryId", { valueAsNumber: true })}
+        placeholder="Select Category"
         options={[
           { value: 0, label: "Select Category" },
           ...categories.map((c) => ({
@@ -118,8 +130,10 @@ export default function ProductForm({ product, onSaved }: Props) {
           })),
         ]}
         value={watch("categoryId")}
+        onValueChange={(value) => setValue("categoryId", value as number)}
         error={errors.categoryId?.message}
       />
+
       {/* SKU */}
       <Input
         label="SKU"
@@ -153,7 +167,7 @@ export default function ProductForm({ product, onSaved }: Props) {
           type="checkbox"
           id="isActive"
           {...register("isActive")}
-          className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-400 dark:ring-offset-gray-800 focus:ring-2"
+          className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-400 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
         />
         <label
           htmlFor="isActive"

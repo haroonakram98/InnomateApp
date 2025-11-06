@@ -17,6 +17,10 @@ namespace InnomateApp.Application.Mappings
             CreateMap<UpdateProductDto, Product>();
 
             CreateMap<Category,CategoryDto>();
+
+            CreateMap<Customer, CustomerDto>().ReverseMap();
+            CreateMap<CreateCustomerDto, Customer>();
+            CreateMap<UpdateCustomerDto, Customer>();
         }
     }
 }
