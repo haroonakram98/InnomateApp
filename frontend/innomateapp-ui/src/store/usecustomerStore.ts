@@ -1,69 +1,171 @@
+// stores/useCustomerStore.ts
 import { create } from "zustand";
-import { Customer, CreateCustomerDto, UpdateCustomerDto } from "@/types/customer.js";
-import * as api from "@/api/customerApi.js";
+import {
+  CustomerDTO,
+  CreateCustomerDto,
+  UpdateCustomerDto,
+} from "@/types/customer.js";
+import {customerApi} from "@/api/customerApi.js"
+import { useToastStore } from "@/store/useToastStore.js";
 
 interface CustomerState {
-  customers: Customer[];
-  loading: boolean;
-  fetchCustomers: () => Promise<void>;
-  createCustomer: (dto: CreateCustomerDto) => Promise<void>;
-  updateCustomer: (id: number, dto: UpdateCustomerDto) => Promise<void>;
-  deleteCustomer: (id: number) => Promise<void>;
-  getCustomer: (id: number) => Promise<Customer | null>;
+  // State
+  customers: CustomerDTO[];
+  selectedCustomer: CustomerDTO | null;
+  isLoading: boolean;
+  error: string | null;
+
+  // Actions (grouped)
+  actions: {
+    fetchCustomers: () => Promise<void>;
+    createCustomer: (dto: CreateCustomerDto) => Promise<void>;
+    updateCustomer: (id: number, dto: UpdateCustomerDto) => Promise<void>;
+    deleteCustomer: (id: number) => Promise<void>;
+    getCustomer: (id: number) => Promise<CustomerDTO | null>;
+    selectCustomer: (customer: CustomerDTO | null) => void;
+    clearError: () => void;
+  };
 }
 
 export const useCustomerStore = create<CustomerState>((set, get) => ({
+  // Initial state
   customers: [],
-  loading: false,
+  selectedCustomer: null,
+  isLoading: false,
+  error: null,
 
-  fetchCustomers: async () => {
-    set({ loading: true });
-    try {
-      const data = await api.getCustomers();
-      set({ customers: data });
-    } finally {
-      set({ loading: false });
-    }
-  },
+  actions: {
+    fetchCustomers: async () => {
+      const toast = useToastStore.getState().push;
+      set({ isLoading: true, error: null });
 
-  createCustomer: async (dto) => {
-    set({ loading: true });
-    try {
-      const created = await api.createCustomer(dto);
-      // append created customer
-      set((s) => ({ customers: [created, ...s.customers] }));
-    } finally {
-      set({ loading: false });
-    }
-  },
+      try {
+        const data = await customerApi.getAll(); // or api.getCustomers()
+        set({ customers: data, isLoading: false });
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Failed to fetch customers";
+        set({ error: message, isLoading: false });
+        toast(message, "error");
+      }
+    },
 
-  updateCustomer: async (id, dto) => {
-    set({ loading: true });
-    try {
-      await api.updateCustomer(id, dto);
-      // reload list or patch local state
-      await get().fetchCustomers();
-    } finally {
-      set({ loading: false });
-    }
-  },
+    createCustomer: async (dto: CreateCustomerDto) => {
+      const toast = useToastStore.getState().push;
+      set({ error: null });
 
-  deleteCustomer: async (id) => {
-    set({ loading: true });
-    try {
-      await api.deleteCustomer(id);
-      set((s) => ({ customers: s.customers.filter((c) => c.customerId !== id) }));
-    } finally {
-      set({ loading: false });
-    }
-  },
+      try {
+        const created = await customerApi.create(dto); // or api.createCustomer(dto)
+        set((state) => ({
+          customers: [created, ...state.customers],
+        }));
+        toast("Customer created successfully", "success");
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Failed to create customer";
+        set({ error: message });
+        toast(message, "error");
+        throw error;
+      }
+    },
 
-  getCustomer: async (id) => {
-    try {
-      const customer = await api.getCustomerById(id);
-      return customer;
-    } catch {
-      return null;
-    }
+    updateCustomer: async (id: number, dto: UpdateCustomerDto) => {
+      const toast = useToastStore.getState().push;
+      set({ error: null });
+
+      try {
+        const updated = await customerApi.update(id, dto); // or api.updateCustomer(id, dto)
+
+        // Patch local state instead of refetching
+        set((state) => ({
+          customers: state.customers.map((c) =>
+            c.customerId === id ? updated : c
+          ),
+          selectedCustomer:
+            state.selectedCustomer?.customerId === id
+              ? updated
+              : state.selectedCustomer,
+        }));
+
+        toast("Customer updated successfully", "success");
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Failed to update customer";
+        set({ error: message });
+        toast(message, "error");
+        throw error;
+      }
+    },
+
+    deleteCustomer: async (id: number) => {
+      const toast = useToastStore.getState().push;
+      set({ error: null });
+
+      try {
+        await customerApi.delete(id); // or api.deleteCustomer(id)
+        set((state) => ({
+          customers: state.customers.filter(
+            (c) => c.customerId !== id
+          ),
+          selectedCustomer:
+            state.selectedCustomer?.customerId === id
+              ? null
+              : state.selectedCustomer,
+        }));
+        toast("Customer deleted successfully", "success");
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Failed to delete customer";
+        set({ error: message });
+        toast(message, "error");
+        throw error;
+      }
+    },
+
+    getCustomer: async (id: number): Promise<CustomerDTO | null> => {
+      const toast = useToastStore.getState().push;
+      set({ error: null });
+
+      try {
+        const customer = await customerApi.getById(id); // or api.getCustomerById(id)
+        return customer;
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Failed to fetch customer";
+        set({ error: message });
+        toast(message, "error");
+        return null;
+      }
+    },
+
+    selectCustomer: (customer: CustomerDTO | null) => {
+      set({ selectedCustomer: customer });
+    },
+
+    clearError: () => {
+      set({ error: null });
+    },
   },
 }));
+
+// Selector hooks (like product store)
+export const useCustomers = () =>
+  useCustomerStore((state) => state.customers);
+export const useSelectedCustomer = () =>
+  useCustomerStore((state) => state.selectedCustomer);
+export const useCustomersLoading = () =>
+  useCustomerStore((state) => state.isLoading);
+export const useCustomersError = () =>
+  useCustomerStore((state) => state.error);
+export const useCustomerActions = () =>
+  useCustomerStore((state) => state.actions);

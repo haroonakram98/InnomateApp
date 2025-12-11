@@ -1,50 +1,15 @@
-"use client"
-
-import { useState, useEffect } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/Table.js"
 import Button from "@/components/ui/Button.js"
 import type { SaleDTO } from "@/types/sale.js"
 
 interface SaleTableProps {
-  onEdit: (id: number) => void
+  onEdit: (id: number) => void;
+  onDelete: (id: number) => void;
+  sales: SaleDTO[];
+  loading?: boolean;
 }
 
-export function SaleTable({ onEdit }: SaleTableProps) {
-  const [sales, setSales] = useState<SaleDTO[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const mockSales: SaleDTO[] = [
-      {
-        saleId: 1,
-        customerId: 101,
-        customerName: "John Doe",
-        invoiceNo: "INV-001",
-        totalAmount: 5000,
-        saleDate: "2025-01-01",
-        saleDetails: [
-          {
-            productId: 1,
-            quantity: 2,
-            unitPrice: 2500,
-            total: 5000,
-          },
-        ],
-        payments: [
-          {
-            paymentMethod: "Cash",
-            amount: 5000,
-          },
-        ],
-      },
-    ]
-
-    setTimeout(() => {
-      setSales(mockSales)
-      setLoading(false)
-    }, 500)
-  }, [])
-
+export function SaleTable({ onEdit, onDelete, sales, loading }: SaleTableProps) {
   if (loading) {
     return <div className="text-center py-8">Loading...</div>
   }
@@ -72,13 +37,18 @@ export function SaleTable({ onEdit }: SaleTableProps) {
         <TableBody>
           {sales.map((sale) => (
             <TableRow key={sale.saleId}>
-              <TableCell className="font-medium">{sale.invoiceNo}</TableCell>
-              <TableCell>{sale.customerName}</TableCell>
+              <TableCell className="font-medium">{sale?.invoiceNo || sale.saleId}</TableCell>
+              <TableCell>{sale?.customer?.name}</TableCell>
               <TableCell>Rs. {sale.totalAmount.toFixed(2)}</TableCell>
               <TableCell>{sale.saleDate ? new Date(sale.saleDate).toLocaleDateString() : "-"}</TableCell>
               <TableCell>
                 <Button variant="outline" size="sm" onClick={() => sale.saleId && onEdit(sale.saleId)}>
                   Edit
+                </Button>
+              </TableCell>
+              <TableCell>
+                <Button variant="danger" size="sm" onClick={() => sale.saleId && onDelete(sale.saleId)}>
+                  Delete
                 </Button>
               </TableCell>
             </TableRow>

@@ -1,12 +1,12 @@
-export interface Customer {
+export interface CustomerDTO {
   customerId: number;
   name: string;
-  email: string;
+  email?: string;
   phone?: string;
   address?: string;
-  isActive: boolean;
   createdAt?: string;
 }
 
-export type CreateCustomerDto = Omit<Customer, "customerId" | "createdAt">;
-export type UpdateCustomerDto = Partial<CreateCustomerDto>;
+
+export type CreateCustomerDto = Omit<CustomerDTO, "customerId" | "createdAt">;
+export type UpdateCustomerDto = Partial<CreateCustomerDto> & { customerId: number };

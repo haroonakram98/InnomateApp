@@ -4,9 +4,9 @@ import clsx from "clsx";
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode;
   loading?: boolean;
-  variant?: "primary" | "secondary" | "outline" | "danger";
+  variant?: "primary" | "secondary" | "outline" | "danger" | "ghost";
   fullWidth?: boolean;
-  size?: "sm";
+  size?: "sm" | "xs" | "icon";
 }
 
 const Button: React.FC<ButtonProps> = ({
@@ -34,6 +34,9 @@ const Button: React.FC<ButtonProps> = ({
     danger:
       "bg-red-600 text-white hover:bg-red-700 focus:ring-red-300 " +
       "dark:bg-red-500 dark:hover:bg-red-600 dark:focus:ring-red-800",
+    ghost:
+    "bg-transparent text-gray-700 hover:bg-gray-100 focus:ring-gray-100 " +
+    "dark:text-gray-200 dark:hover:bg-gray-700 dark:focus:ring-gray-700",
   };
 
   return (

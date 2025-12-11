@@ -1,79 +1,134 @@
+// stores/useProductStore.ts
 import { create } from "zustand";
-import { ProductDTO, CreateProductDto } from "../types/product.js";
-import { productApi } from "../api/products.js";
+import { ProductDTO, CreateProductDto, UpdateProductDto,ProductStockDto } from "@/types/product.js";
+import { productService } from "@/services/productService.js";
+import { useToastStore } from "@/store/useToastStore.js";
+import { SupplierDTO } from "@/types/supplier.js";
 
 interface ProductState {
+  // State
   products: ProductDTO[];
-  loading: boolean;
+  salesProducts: ProductStockDto[];
+  selectedProduct: ProductDTO | null;
+  isLoading: boolean;
   error: string | null;
-
-  // Actions
-  fetchProducts: () => Promise<void>;
-  createProduct: (data: CreateProductDto) => Promise<void>;
-  updateProduct: (id: number, data: ProductDTO) => Promise<void>;
-  deleteProduct: (id: number) => Promise<void>;
-  setProducts: (products: ProductDTO[]) => void;
+  
+  // Actions grouped together
+  actions: {
+    fetchProducts: () => Promise<void>;
+    createProduct: (payload: CreateProductDto) => Promise<void>;
+    updateProduct: (payload: UpdateProductDto) => Promise<void>;
+    deleteProduct: (id: number) => Promise<void>;
+    selectProduct: (product: ProductDTO | null) => void;
+    clearError: () => void;
+    fetchProductsForSales: () => Promise<void>;
+  };
 }
 
 export const useProductStore = create<ProductState>((set, get) => ({
+  // Initial state
   products: [],
-  loading: false,
+   salesProducts: [],
+  selectedProduct: null,
+  isLoading: false,
   error: null,
 
-  setProducts: (products) => set({ products }),
-
-  fetchProducts: async () => {
-    set({ loading: true, error: null });
-    try {
-      const data = await productApi.getAll();
-      set({ products: data, loading: false });
-    } catch (error: any) {
-      console.error("Error fetching products:", error);
-      set({
-        loading: false,
-        error: error.message || "Failed to load products",
-      });
-    }
-  },
-
-  createProduct: async (data: CreateProductDto) => {
-    try {
-      const newProduct = await productApi.create(data);
-      if (newProduct) {
-        set({ products: [...get().products, newProduct] });
+  // Actions
+  actions: {
+    fetchProducts: async () => {
+      const toast = useToastStore.getState().push;
+      set({ isLoading: true, error: null });
+      try {
+        const products = await productService.getProducts();
+        debugger
+        set({ products, isLoading: false });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to fetch products";
+        set({ error: message, isLoading: false });
+        toast(message, 'error');
       }
-    } catch (error: any) {
-      console.error("Error creating product:", error);
-      set({ error: error.message || "Failed to create product" });
-      throw error;
-    }
-  },
+    },
 
-  updateProduct: async (id: number, data: ProductDTO) => {
-    try {
-      const updated = await productApi.update(id, data);
-      if (updated) {
-        set({
-          products: get().products.map((p) =>
-            p.productId === id ? updated : p
-          ),
-        });
+    createProduct: async (payload: CreateProductDto) => {
+      const toast = useToastStore.getState().push;
+      set({ error: null });
+      try {
+        const newProduct = await productService.createProduct(payload);
+        set((state) => ({ 
+          products: [...state.products, newProduct] 
+        }));
+        toast("Product created successfully", 'success');
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to create product";
+        set({ error: message });
+        toast(message, 'error');
+        throw error;
       }
-    } catch (error: any) {
-      console.error("Error updating product:", error);
-      set({ error: error.message || "Failed to update product" });
-      throw error;
-    }
-  },
+    },
 
-  deleteProduct: async (id: number) => {
-    try {
-      await productApi.delete(id);
-      set({ products: get().products.filter((p) => p.productId !== id) });
-    } catch (error: any) {
-      console.error("Error deleting product:", error);
-      set({ error: error.message || "Failed to delete product" });
-      throw error;
-    }
+    updateProduct: async (payload: UpdateProductDto) => {
+  const toast = useToastStore.getState().push;
+  set({ error: null });
+  try {
+    const updatedProduct = await productService.updateProduct(payload);
+    set((state) => ({
+      products: state.products.map((product) =>
+        product.productId === payload.productId ? updatedProduct : product
+      ),
+    }));
+    toast("Product updated successfully", 'success');
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to update product";
+    set({ error: message });
+    toast(message, 'error');
+    throw error;
+  }
+},
+
+    deleteProduct: async (id: number) => {
+      const toast = useToastStore.getState().push;
+      set({ error: null });
+      try {
+        await productService.deleteProduct(id);
+        set((state) => ({
+          products: state.products.filter((product) => product.productId !== id),
+          selectedProduct: state.selectedProduct?.productId === id ? null : state.selectedProduct,
+        }));
+        toast("Product deleted successfully", 'success');
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to delete product";
+        set({ error: message });
+        toast(message, 'error');
+        throw error;
+      }
+    },
+
+    selectProduct: (product: ProductDTO | null) => {
+      set({ selectedProduct: product });
+    },
+
+    clearError: () => {
+      set({ error: null });
+    },
+    fetchProductsForSales: async () => {
+      const toast = useToastStore.getState().push;
+      set({ isLoading: true, error: null });
+      try {
+        const products = await productService.fetchProductsForSale(); 
+        set({ salesProducts: products, isLoading: false });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to fetch products";
+        set({ error: message, isLoading: false });
+        toast(message, 'error');
+      }
+    },
   },
 }));
+
+// Selector hooks for optimal performance
+export const useProducts = () => useProductStore((state) => state.products);
+export const useSalesProducts = () => useProductStore((state) => state.salesProducts);
+export const useProductsLoading = () => useProductStore((state) => state.isLoading);
+export const useProductsError = () => useProductStore((state) => state.error);
+export const useSelectedProduct = () => useProductStore((state) => state.selectedProduct);
+export const useProductActions = () => useProductStore((state) => state.actions);

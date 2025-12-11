@@ -1,15 +1,13 @@
-import { useEffect, useState } from "react";
+// features/products/ProductForm.tsx
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useProductStore } from "../../store/useProductStore.js";
-import { useCategoryStore } from "@/store/useCategoryStore.js";
-import { CreateProductDto, ProductDTO } from "../../types/product.js";
-import Button from "@/components/ui/Button.js";
-import Input from "@/components/ui/Input.js";
-import { FormSelect } from "@/components/ui/Select.js";
+import { ProductDTO, CreateProductDto, UpdateProductDto } from "@/types/product.js";
+import { useCategories } from '@/store/useCategoryStore.js';
+import { useCategoryActions } from '@/store/useCategoryStore.js';
 
-// ✅ Zod schema for validation
+// Zod schema for validation
 const productSchema = z.object({
   name: z.string().min(1, "Product name is required"),
   categoryId: z.number().min(1, "Category is required"),
@@ -23,21 +21,20 @@ type ProductFormData = z.infer<typeof productSchema>;
 
 interface Props {
   product?: ProductDTO | null;
-  onSaved: () => void;
+  onCreate?: (data: CreateProductDto) => void;
+  onUpdate?: (data: UpdateProductDto) => void;
+  onCancel: () => void;
 }
 
-export default function ProductForm({ product, onSaved }: Props) {
-  const { createProduct, updateProduct } = useProductStore();
-  const { categories, fetchCategories } = useCategoryStore();
-  const [loading, setLoading] = useState(false);
+export default function ProductForm({ product, onCreate, onUpdate, onCancel }: Props) {
+  const categories = useCategories();
+  const { fetchCategories } = useCategoryActions();
 
   const {
     register,
     handleSubmit,
     reset,
-    watch,
-    setValue,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
     defaultValues: {
@@ -78,91 +75,124 @@ export default function ProductForm({ product, onSaved }: Props) {
     }
   }, [product, reset]);
 
-  const onSubmit = async (data: ProductFormData) => {
-    try {
-      setLoading(true);
-      
-      if (product?.productId) {
-        // Update existing product
-        await updateProduct(product.productId, data as ProductDTO);
-      } else {
-        // Create new product
-        await createProduct(data as CreateProductDto);
-      }
-      
-      // Reset form and notify parent
-      reset();
-      onSaved();
-    } catch (err) {
-      console.error("Error saving product:", err);
-      alert("Failed to save product. Please try again.");
-    } finally {
-      setLoading(false);
+  const handleFormSubmit = async (data: ProductFormData) => {
+    if (product && onUpdate) {
+      // For update, include productId
+      const updateData: UpdateProductDto = {
+        ...data,
+        productId: product.productId
+      };
+      await onUpdate(updateData);
+    } else if (onCreate) {
+      // For create, just use the form data
+      await onCreate(data as CreateProductDto);
     }
   };
 
   return (
-    <form
-      onSubmit={handleSubmit(onSubmit)}
-      className="space-y-4 bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 max-w-lg mx-auto"
-    >
-      <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">
-        {product ? "Update Product" : "Add Product"}
-      </h2>
-
+    <form onSubmit={handleSubmit(handleFormSubmit)} className="p-6 space-y-4">
       {/* Product Name */}
-      <Input
-        label="Product Name"
-        placeholder="Enter product name"
-        {...register("name")}
-        error={errors.name?.message}
-      />
+      <div>
+        <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
+          Product Name *
+        </label>
+        <input
+          type="text"
+          {...register("name")}
+          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+          placeholder="Enter product name"
+        />
+        {errors.name && (
+          <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>
+        )}
+      </div>
 
       {/* Category */}
-      <FormSelect
-        label="Category"
-        placeholder="Select Category"
-        options={[
-          { value: 0, label: "Select Category" },
-          ...categories.map((c) => ({
-            value: c.categoryId,
-            label: c.name,
-          })),
-        ]}
-        value={watch("categoryId")}
-        onValueChange={(value) => setValue("categoryId", value as number)}
-        error={errors.categoryId?.message}
-      />
+      <div>
+        <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
+          Category *
+        </label>
+        <select
+          {...register("categoryId", { valueAsNumber: true })}
+          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+        >
+          <option value={0}>Select Category</option>
+          {categories.map((category) => (
+            <option key={category.categoryId} value={category.categoryId}>
+              {category.name}
+            </option>
+          ))}
+        </select>
+        {errors.categoryId && (
+          <p className="text-red-500 text-sm mt-1">{errors.categoryId.message}</p>
+        )}
+      </div>
 
       {/* SKU */}
-      <Input
-        label="SKU"
-        placeholder="Enter SKU (optional)"
-        {...register("sku")}
-        error={errors.sku?.message}
-      />
+      <div>
+        <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
+          SKU
+        </label>
+        <input
+          type="text"
+          {...register("sku")}
+          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+          placeholder="Enter SKU (optional)"
+        />
+        {errors.sku && (
+          <p className="text-red-500 text-sm mt-1">{errors.sku.message}</p>
+        )}
+      </div>
 
       {/* Default Sale Price */}
-      <Input
-        label="Default Sale Price"
-        type="number"
-        step="0.01"
-        placeholder="Enter default sale price"
-        {...register("defaultSalePrice", { valueAsNumber: true })}
-        error={errors.defaultSalePrice?.message}
-      />
+      <div>
+        <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
+          Default Sale Price *
+        </label>
+        <input
+          type="number"
+          step="0.01"
+          {...register("defaultSalePrice", { valueAsNumber: true })}
+          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+          placeholder="Enter default sale price"
+        />
+        {errors.defaultSalePrice && (
+          <p className="text-red-500 text-sm mt-1">{errors.defaultSalePrice.message}</p>
+        )}
+      </div>
 
       {/* Reorder Level */}
-      <Input
-        label="Reorder Level"
-        type="number"
-        placeholder="Enter reorder level"
-        {...register("reorderLevel", { valueAsNumber: true })}
-        error={errors.reorderLevel?.message}
-      />
+      <div>
+        <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
+          Reorder Level
+        </label>
+        <input
+          type="number"
+          {...register("reorderLevel", { valueAsNumber: true })}
+          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+          placeholder="Enter reorder level"
+        />
+        {errors.reorderLevel && (
+          <p className="text-red-500 text-sm mt-1">{errors.reorderLevel.message}</p>
+        )}
+      </div>
+
+      {/* Stock Quantity (Read-only) */}
+      <div>
+        <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
+          Stock Quantity
+        </label>
+        <input
+          type="number"
+          disabled
+          value={((product?.stockSummary?.totalIn || 0) - (product?.stockSummary?.totalOut || 0))}
+          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+        />
+        <p className="text-xs text-gray-500 mt-1">Stock quantity is managed through inventory</p>
+      </div>
 
       {/* Is Active */}
-      <div className="flex items-center gap-2 mt-2">
+      <div className="flex items-center gap-2">
         <input
           type="checkbox"
           id="isActive"
@@ -177,10 +207,23 @@ export default function ProductForm({ product, onSaved }: Props) {
         </label>
       </div>
 
-      {/* Submit Button */}
-      <Button type="submit" loading={loading} className="w-full mt-4">
-        {product ? "Update Product" : "Add Product"}
-      </Button>
+      {/* Form Actions */}
+      <div className="flex gap-3 pt-4">
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white py-2 px-4 rounded-lg transition-colors"
+        >
+          {isSubmitting ? 'Saving...' : (product ? 'Update Product' : 'Create Product')}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded-lg transition-colors"
+        >
+          Cancel
+        </button>
+      </div>
     </form>
   );
 }

@@ -6,7 +6,11 @@ import DashboardPage from "@/pages/DashboardPage.js";
 import ProductsPage from "./pages/ProductsPage.js";
 import CustomerPage from "./pages/CustomerPage.js";
 import SalesPage from "./pages/SalesPage.js";
-
+import POSPage from "./pages/POSPage.js";
+import CategoryPage from "./pages/CategoryPage.js";
+import StockPage from "./pages/StockPage.js";
+import PurchasePage from "./pages/PurchasePage.js";
+import SupplierPage from "./pages/SupplierPage.js";
 function App() {
   const { isAuthenticated, user, checkToken } = useAuthStore();
 
@@ -20,16 +24,22 @@ function App() {
         {/* Public Route */}
         <Route
           path="/login"
-          element={!isAuthenticated ? <AuthPage /> : <Navigate to="/sales" replace />}
+          element={!isAuthenticated ? <AuthPage /> : <Navigate to="/sales/new" replace />}
         />
 
         {/* Redirect root to /sales */}
         <Route
           path="/"
           element={
-            isAuthenticated ? <Navigate to="/sales" replace /> : <Navigate to="/login" replace />
+            isAuthenticated ? <Navigate to="/sales/new" replace /> : <Navigate to="/login" replace />
           }
         />
+        <Route
+          path="/sales/new"
+          element={
+            isAuthenticated ? <POSPage /> : <Navigate to="/login" replace />
+          }
+          />
 
         {/* Protected Routes */}
         <Route
@@ -38,6 +48,12 @@ function App() {
             isAuthenticated ? <SalesPage /> : <Navigate to="/login" replace />
           }
         />
+        <Route
+        path="/suppliers"
+        element={
+          isAuthenticated ? <SupplierPage /> : <Navigate to="/login" replace />
+        }
+      />
         
         <Route
           path="/dashboard"
@@ -47,9 +63,29 @@ function App() {
         />
         
         <Route
+          path="/stocks"
+          element={
+            isAuthenticated ? <StockPage /> : <Navigate to="/login" replace />
+          }
+        />
+        <Route
+          path="/purchases"
+          element={
+            isAuthenticated ? <PurchasePage /> : <Navigate to="/login" replace />
+          }
+        />
+
+        <Route
           path="/products"
           element={
             isAuthenticated ? <ProductsPage /> : <Navigate to="/login" replace />
+          }
+        />
+
+        <Route
+          path="/categories"
+          element={
+            isAuthenticated ? <CategoryPage /> : <Navigate to="/login" replace />
           }
         />
         

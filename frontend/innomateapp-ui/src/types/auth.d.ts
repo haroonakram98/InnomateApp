@@ -10,7 +10,7 @@ export interface RegisterRequest {
 }
 
 export interface User {
-  id: string;
+  id: number;
   userName: string;
   email: string;
 }

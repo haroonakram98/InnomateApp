@@ -1,9 +1,9 @@
 import React from "react";
-import { Customer } from "@/types/customer.js";
+import { CustomerDTO } from "@/types/customer.js";
 import Button from "@/components/ui/Button.js";
 
 type Props = {
-  customers: Customer[];
+  customers: CustomerDTO[];
   loading?: boolean;
   onEdit: (id: number) => void;
   onDelete: (id: number) => void;

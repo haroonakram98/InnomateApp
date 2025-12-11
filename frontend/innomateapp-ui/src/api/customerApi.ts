@@ -1,25 +1,37 @@
+// api/customers/index.ts
 import axios from "@/lib/utils/axios.js";
-import { Customer, CreateCustomerDto, UpdateCustomerDto } from "@/types/customer.js";
+import {
+  CustomerDTO,
+  CreateCustomerDto,
+  UpdateCustomerDto,
+} from "@/types/customer.js";
 
-export const getCustomers = async (): Promise<Customer[]> => {
-  const res = await axios.get("/Customer");
-  return res.data;
-};
+export const customerApi = {
+  getAll: async (): Promise<CustomerDTO[]> => {
+    const { data } = await axios.get<CustomerDTO[]>("/Customer");
+    return data;
+  },
 
-export const getCustomerById = async (id: number): Promise<Customer> => {
-  const res = await axios.get(`/Customers${id}`);
-  return res.data;
-};
+  getById: async (id: number): Promise<CustomerDTO> => {
+    // Fixed missing slash & plural issue
+    const { data } = await axios.get<CustomerDTO>(`/Customer/${id}`);
+    return data;
+  },
 
-export const createCustomer = async (data: CreateCustomerDto): Promise<Customer> => {
-  const res = await axios.post("/Customer", data);
-  return res.data;
-};
+  create: async (payload: CreateCustomerDto): Promise<CustomerDTO> => {
+    const { data } = await axios.post<CustomerDTO>("/Customer", payload);
+    return data;
+  },
 
-export const updateCustomer = async (id: number, data: UpdateCustomerDto): Promise<void> => {
-  await axios.put(`/Customer/${id}`, data);
-};
+  update: async (
+    id: number,
+    payload: UpdateCustomerDto
+  ): Promise<CustomerDTO> => {
+    const { data } = await axios.put<CustomerDTO>(`/Customer/${id}`, payload);
+    return data;
+  },
 
-export const deleteCustomer = async (id: number): Promise<void> => {
-  await axios.delete(`/Customer/${id}`);
+  delete: async (id: number): Promise<void> => {
+    await axios.delete(`/Customer/${id}`);
+  },
 };
