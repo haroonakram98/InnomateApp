@@ -47,7 +47,7 @@ namespace InnomateApp.Infrastructure.Security
                 issuer: _configuration["Jwt:Issuer"] ?? string.Empty,
                 audience: _configuration["Jwt:Audience"] ?? string.Empty,
                 claims: claims,
-                expires: DateTime.UtcNow.AddSeconds(1000),
+                expires: DateTime.Now.AddSeconds(1000),
                 signingCredentials: creds);
 
             return new JwtSecurityTokenHandler().WriteToken(token);

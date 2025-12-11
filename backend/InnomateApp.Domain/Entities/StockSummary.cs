@@ -21,7 +21,7 @@ namespace InnomateApp.Domain.Entities
         public decimal TotalValue { get; set; }
 
 
-        public DateTime LastUpdated { get; set; } = DateTime.UtcNow;
+        public DateTime LastUpdated { get; set; } = DateTime.Now;
 
         public Product Product { get; set; } = null!;
     }

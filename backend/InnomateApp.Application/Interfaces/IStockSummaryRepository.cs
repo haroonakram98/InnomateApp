@@ -12,5 +12,6 @@ namespace InnomateApp.Application.Interfaces
         Task<StockSummary?> GetByProductIdAsync(int productId);
         Task<IEnumerable<StockSummary>> GetAllAsync();
         Task DeleteAsync(StockSummary entity); // Add this
+        Task UpdateStockSummaryAsync(int productId, decimal quantity, decimal unitCost);
     }
 }

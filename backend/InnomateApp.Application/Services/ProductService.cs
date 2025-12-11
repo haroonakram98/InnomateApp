@@ -24,7 +24,7 @@ namespace InnomateApp.Application.Services
         // ✅ Get all products with stock
         public async Task<IEnumerable<ProductDto>> GetAllAsync()
         {
-            var products = await _productRepo.GetAllWithStockAsync();
+            var products = await _productRepo.GetProductsWithCategoryAsync();
 
             return products.Select(p => new ProductDto
             {
@@ -35,16 +35,16 @@ namespace InnomateApp.Application.Services
                 DefaultSalePrice = p.DefaultSalePrice,
                 ReorderLevel = p.ReorderLevel,
                 IsActive = p.IsActive,
-                StockBalance = p.StockSummary?.Balance ?? 0,
-                AverageCost = p.StockSummary?.AverageCost ?? 0,
-                TotalValue = p.StockSummary?.TotalValue ?? 0
+                //StockBalance = p.StockSummary?.Balance ?? 0,
+                //AverageCost = p.StockSummary?.AverageCost ?? 0,
+                //TotalValue = p.StockSummary?.TotalValue ?? 0
             }).ToList();
         }
 
         // ✅ Get single product by ID
         public async Task<ProductDto?> GetByIdAsync(int id)
         {
-            var product = await _productRepo.GetByIdWithCategoryAsync(id);
+            var product = await _productRepo.GetByIdAsync(id);
             if (product == null)
                 return null;
 
@@ -52,11 +52,11 @@ namespace InnomateApp.Application.Services
         }
 
         // ✅ Create new product + initialize StockSummary
-        public async Task<int> CreateAsync(CreateProductDto dto)
+        public async Task<ProductDto> CreateAsync(CreateProductDto dto)
         {
             var product = _mapper.Map<Product>(dto);
-            await _productRepo.AddAsync(product);
-            await _productRepo.SaveChangesAsync();
+            var createdProduct = await _productRepo.AddAsync(product);
+            
 
             // Initialize stock summary
             var stock = new StockSummary
@@ -69,9 +69,8 @@ namespace InnomateApp.Application.Services
                 TotalValue = 0
             };
             await _stockRepo.AddAsync(stock);
-            await _stockRepo.SaveChangesAsync();
-
-            return product.ProductId;
+            //await _stockRepo.SaveChangesAsync();
+            return _mapper.Map<ProductDto>(product);
         }
 
         // ✅ Update product details
@@ -82,22 +81,53 @@ namespace InnomateApp.Application.Services
                 throw new KeyNotFoundException("Product not found.");
 
             _mapper.Map(dto, product);
-            _productRepo.Update(product);
-            return await _productRepo.SaveChangesAsync();
+            var updatedProduct = _productRepo.UpdateAsync(product);
+            return updatedProduct.Id;
         }
 
         // ✅ Delete product (and its stock summary)
         public async Task<int> DeleteAsync(int id)
         {
-            var product = await _productRepo.GetByIdWithStockAsync(id);
+            var product = await _productRepo.GetByIdtWithStockSummaryAsync(id);
             if (product == null)
                 throw new KeyNotFoundException("Product not found.");
 
             if (product.StockSummary != null)
                 await _stockRepo.DeleteAsync(product.StockSummary);
 
-            _productRepo.Delete(product);
-            return await _productRepo.SaveChangesAsync();
+            await _productRepo.DeleteAsync(product);
+            return id;
+        }
+        public Task DeactivateAsync(int id)
+        {
+            return _productRepo.DeactivateAsync(id);
+        }
+
+        public async Task<IEnumerable<ProductStockDto>> GetProductsForSale()
+        {
+            var products = await _productRepo.GetProductsWithCategoryAsync();
+
+            return products.Select(p => new ProductStockDto
+            {
+                ProductId = p.ProductId,
+                Name = p.Name,
+                CategoryId = p.CategoryId,
+                CategoryName = p.Category?.Name,
+                SKU = p.SKU,
+                ReorderLevel = p.ReorderLevel,
+                IsActive = p.IsActive,
+                DefaultSalePrice = p.DefaultSalePrice,
+                StockSummary = p.StockSummary == null
+            ? null
+            : new StockSummaryDto
+            {
+                ProductId = p.StockSummary.ProductId,
+                Balance = p.StockSummary.Balance,
+                StockQuanitity = p.StockSummary.TotalIn - p.StockSummary.TotalOut
+
+                // add other fields if you have them (Opening, In, Out, etc.)
+            }
+            }).ToList();
         }
     }
 }

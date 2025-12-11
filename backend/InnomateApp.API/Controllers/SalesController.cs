@@ -28,9 +28,17 @@ namespace InnomateApp.API.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateSaleRequest request)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
-            var created = await _saleService.CreateAsync(request);
-            return CreatedAtAction(nameof(GetById), new { id = created.SaleId }, created);
+            try
+            {
+                if (!ModelState.IsValid) return BadRequest(ModelState);
+                var created = await _saleService.CreateAsync(request);
+                return CreatedAtAction(nameof(GetById), new { id = created.SaleId }, created);
+            }
+            catch(Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+
         }
 
         [HttpPut("{id:int}")]
@@ -46,6 +54,13 @@ namespace InnomateApp.API.Controllers
         {
             var deleted = await _saleService.DeleteAsync(id);
             return deleted ? NoContent() : NotFound();
+        }
+
+        [HttpGet("next-invoice-no")]
+        public async Task<IActionResult> GetNextInvoiceNumber()
+        {
+            var nextInvoiceNo = await _saleService.GetNextInvoiceNumberAsync();
+            return Ok(new { invoiceNo = nextInvoiceNo });
         }
     }
 }

@@ -9,45 +9,70 @@ namespace InnomateApp.Infrastructure.Repositories
     {
         public ProductRepository(AppDbContext context) : base(context) { }
 
-        public async Task<IEnumerable<Product>> GetAllAsync() =>
-            await _context.Products.Include(p => p.Category).ToListAsync();
-
-        public async Task<Product?> GetByIdAsync(int id) =>
-            await _context.Products.Include(p => p.Category)
-                                   .FirstOrDefaultAsync(p => p.ProductId == id);
-
-        public async Task<Product?> GetByIdWithCategoryAsync(int id) =>
-            await _context.Products.Include(p => p.Category)
-                                   .Include(p => p.StockSummary)
-                                   .FirstOrDefaultAsync(p => p.ProductId == id);
-
-        public async Task<IEnumerable<Product>> GetAllWithStockAsync() =>
-            await _context.Products.Include(p => p.Category)
-                                   .Include(p => p.StockSummary)
-                                   .ToListAsync();
-
-        public async Task AddAsync(Product entity)
-        {
-            await _context.Products.AddAsync(entity);
-        }
-
-        public void Update(Product entity)
-        {
-            _context.Products.Update(entity);
-        }
-
-        public void Delete(Product entity)
-        {
-            _context.Products.Remove(entity);
-        }
-
-        public async Task<Product?> GetByIdWithStockAsync(int id)
+        public async Task<Product?> GetByIdtWithStockSummaryAsync(int id)
         {
             return await _context.Products
+                .AsNoTracking()
+                .Include(p => p.StockSummary)
+                .Where(p => p.IsActive && p.ProductId == id)
+                .SingleOrDefaultAsync();
+        }
+
+        public async Task<IReadOnlyList<Product>> GetProductsWithCategoryAsync()
+        {
+            return await _context.Products
+                .Include(p => p.Category)
+                .Include(p => p.StockSummary)
+                .Where(p => p.IsActive)
+                .AsNoTracking()
+                .ToListAsync();
+        }
+
+        public async Task<Product?> GetProductWithStockInfoAsync(int id)
+        {
+            return await _context.Products
+                .Include(p => p.Category)
                 .Include(p => p.StockSummary)
                 .FirstOrDefaultAsync(p => p.ProductId == id);
         }
 
-        public async Task<int> SaveChangesAsync() => await _context.SaveChangesAsync();
+        public async Task<IReadOnlyList<Product>> GetLowStockProductsAsync()
+        {
+            return await _context.Products
+                .Include(p => p.StockSummary)
+                .Where(p => p.IsActive && p.StockSummary != null && p.StockSummary.Balance <= p.ReorderLevel)
+                .AsNoTracking()
+                .ToListAsync();
+        }
+
+        public async Task<bool> ProductSkuExistsAsync(string sku)
+        {
+            return await _context.Products
+                .AnyAsync(p => p.SKU == sku);
+        }
+
+        public async Task<IReadOnlyList<Product>> SearchProductsAsync(string searchTerm)
+        {
+            return await _context.Products
+                .Include(p => p.Category)
+                .Include(p => p.StockSummary)
+                .Where(p => p.IsActive &&
+                           (p.Name.Contains(searchTerm) ||
+                            p.SKU != null && p.SKU.Contains(searchTerm)))
+                .AsNoTracking()
+                .ToListAsync();
+        }
+        public async Task DeactivateAsync(int id)
+        {
+            var product = await _context.Products
+                .FirstOrDefaultAsync(p => p.ProductId == id);
+
+            if (product is null)
+                throw new KeyNotFoundException($"Product with id {id} not found.");
+
+            product.IsActive = false;
+
+            await _context.SaveChangesAsync();
+        }
     }
 }

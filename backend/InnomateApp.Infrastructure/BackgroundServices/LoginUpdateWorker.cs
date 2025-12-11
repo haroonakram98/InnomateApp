@@ -38,7 +38,7 @@ namespace InnomateApp.Application.Services
                         var user = await db.Users.FindAsync(userId);
                         if (user != null)
                         {
-                            user.LastLoginAt = DateTime.UtcNow;
+                            user.LastLoginAt = DateTime.Now;
                             await db.SaveChangesAsync(stoppingToken);
                         }
                     }

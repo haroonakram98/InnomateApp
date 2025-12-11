@@ -10,7 +10,7 @@ namespace InnomateApp.Domain.Entities
     {
         public int ReturnId { get; set; }
         public int SaleId { get; set; }
-        public DateTime ReturnDate { get; set; } = DateTime.UtcNow;
+        public DateTime ReturnDate { get; set; } = DateTime.Now;
         public decimal TotalRefund { get; set; }
         public string? Reason { get; set; }
 

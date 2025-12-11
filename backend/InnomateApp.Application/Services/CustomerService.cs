@@ -47,9 +47,8 @@ namespace InnomateApp.Application.Services
                 return false;
 
             _mapper.Map(dto, existing);
-            _repository.Update(existing);  // ✅ No await — just updates EF tracking
+            await _repository.UpdateAsync(existing);  // ✅ No await — just updates EF tracking
 
-            await _repository.SaveChangesAsync(); // ✅ async DB commit
             return true;
         }
 
@@ -59,9 +58,8 @@ namespace InnomateApp.Application.Services
             if (entity == null)
                 return false;
 
-            _repository.Delete(entity); // ✅ No await
+            await _repository.DeleteAsync(entity); 
 
-            await _repository.SaveChangesAsync(); // ✅ async DB commit
             return true;
         }
     }

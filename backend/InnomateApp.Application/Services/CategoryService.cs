@@ -26,5 +26,22 @@ namespace InnomateApp.Application.Services
             var categories = await _categoryRepo.GetAllAsync();
             return _mapper.Map<IEnumerable<CategoryDto>>(categories);
         }
+
+        public async Task<IEnumerable<CategoryDto>> CreateAsync()
+        {
+            var categories = await _categoryRepo.GetAllAsync();
+            return _mapper.Map<IEnumerable<CategoryDto>>(categories);
+        }
+        public async Task<CategoryDto> CreateAsync(CreateCategoryDto dto)
+        {
+            var entity = _mapper.Map<Category>(dto);
+            await _categoryRepo.AddAsync(entity);
+            return _mapper.Map<CategoryDto>(entity);
+        }
+        public async Task<CategoryDto?> GetByIdAsync(int id)
+        {
+            var customer = await _categoryRepo.GetByIdAsync(id);
+            return _mapper.Map<CategoryDto?>(customer);
+        }
     }
 }

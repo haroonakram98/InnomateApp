@@ -19,10 +19,12 @@ namespace InnomateApp.Domain.Entities
         // +Quantity = Purchase, -Quantity = Sale
         public decimal Quantity { get; set; }
         public decimal UnitCost { get; set; }
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
 
-        public Product Product { get; set; } = null!;
+        public Product? Product { get; set; } = null!;
 
         public decimal TotalCost { get; set; }
+        public string Reference { get; set; } // PurchaseId, SaleId, etc.
+        public string Notes { get; set; } = string.Empty;
     }
 }

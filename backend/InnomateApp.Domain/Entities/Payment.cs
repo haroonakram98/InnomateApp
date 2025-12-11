@@ -12,7 +12,7 @@ namespace InnomateApp.Domain.Entities
         public int SaleId { get; set; }
         public string PaymentMethod { get; set; } = "Cash"; // Cash, Card, Wallet
         public decimal Amount { get; set; }
-        public DateTime PaymentDate { get; set; } = DateTime.UtcNow;
+        public DateTime PaymentDate { get; set; } = DateTime.Now;
         public string? ReferenceNo { get; set; } // Optional for card/mobile
 
         public Sale? Sale { get; set; }

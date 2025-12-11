@@ -10,5 +10,7 @@ namespace InnomateApp.Application.Interfaces
     public interface ICategoryService
     {
         Task<IEnumerable<CategoryDto>> GetAllAsync();
+        Task<CategoryDto> CreateAsync(CreateCategoryDto dto);
+        Task<CategoryDto?> GetByIdAsync(int id);
     }
 }

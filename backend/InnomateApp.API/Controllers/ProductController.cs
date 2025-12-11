@@ -1,5 +1,7 @@
 ﻿using InnomateApp.Application.DTOs;
 using InnomateApp.Application.Interfaces;
+using InnomateApp.Application.Services;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 
 namespace InnomateApp.API.Controllers
@@ -29,8 +31,8 @@ namespace InnomateApp.API.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateProductDto dto)
         {
-            await _service.CreateAsync(dto);
-            return Ok(new { Message = "Product created successfully" });
+            var created = await _service.CreateAsync(dto);
+            return CreatedAtAction(nameof(GetById), new { id = created.ProductId }, created);
         }
 
         [HttpPut("{id}")]
@@ -44,8 +46,24 @@ namespace InnomateApp.API.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            await _service.DeleteAsync(id);
-            return Ok(new { Message = "Product deleted successfully" });
+            try
+            {
+                await _service.DeactivateAsync(id);
+                return NoContent();
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
+        [HttpGet("for-sale")]
+        public async Task<IActionResult> ForSales() =>
+            Ok(await _service.GetProductsForSale());
+
+
     }
 }

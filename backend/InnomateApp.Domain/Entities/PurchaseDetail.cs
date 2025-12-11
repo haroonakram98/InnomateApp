@@ -23,7 +23,18 @@ namespace InnomateApp.Domain.Entities
 
         public Purchase Purchase { get; set; } = null!;
         public Product Product { get; set; } = null!;
-        [NotMapped]
-        public decimal LineTotal => Quantity * UnitCost;
+        public ICollection<SaleDetail> SaleDetails { get; set; } = new List<SaleDetail>();
+        public void CalculateTotal()
+        {
+            TotalCost = Quantity * UnitCost;
+        }
+
+        public void UpdateRemainingQuantity(decimal soldQuantity)
+        {
+            if (soldQuantity > RemainingQty)
+                throw new InvalidOperationException("Sold quantity exceeds remaining quantity");
+
+            RemainingQty -= soldQuantity;
+        }
     }
 }

@@ -28,6 +28,7 @@ namespace InnomateApp.Infrastructure.Persistence
         public DbSet<Tax> Taxes => Set<Tax>();
         public DbSet<Return> Returns => Set<Return>();
         public DbSet<ReturnDetail> ReturnDetails => Set<ReturnDetail>();
+        public DbSet<SaleDetailBatch> SaleDetailBatches { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -111,8 +112,9 @@ namespace InnomateApp.Infrastructure.Persistence
             // 🔹 FIFO link: SaleDetail → PurchaseDetail (optional, 1:N)
             modelBuilder.Entity<SaleDetail>()
                 .HasOne(d => d.PurchaseDetail)
-                .WithMany()
+                .WithMany(pd => pd.SaleDetails)
                 .HasForeignKey(d => d.PurchaseDetailId)
+                .IsRequired(false)
                 .OnDelete(DeleteBehavior.Restrict);
 
             // 🔹 Product → StockTransaction (1:N)
@@ -131,7 +133,25 @@ namespace InnomateApp.Infrastructure.Persistence
                 .WithOne(s => s.Product)
                 .HasForeignKey<StockSummary>(s => s.ProductId)
                 .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<SaleDetailBatch>(entity =>
+            {
+                entity.HasKey(e => e.SaleDetailBatchId);
 
+                entity.Property(e => e.QuantityUsed).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.UnitCost).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.TotalCost).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+
+                entity.HasOne(e => e.SaleDetail)
+                    .WithMany(sd => sd.UsedBatches)
+                    .HasForeignKey(e => e.SaleDetailId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.PurchaseDetail)
+                    .WithMany()
+                    .HasForeignKey(e => e.PurchaseDetailId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
             // ============================
             // 💰 Precision Configuration (decimal 18,2)
             // ============================
@@ -157,13 +177,29 @@ namespace InnomateApp.Infrastructure.Persistence
             modelBuilder.Entity<Sale>(entity =>
             {
                 entity.Property(e => e.TotalAmount).HasPrecision(18, 4);
+                entity.Property(e => e.PaidAmount).HasPrecision(18, 4);
+                entity.Property(e => e.BalanceAmount).HasPrecision(18, 4);
+                entity.Property(e => e.Discount).HasPrecision(18, 2);
+                entity.Property(e => e.DiscountPercentage).HasPrecision(18, 2);
+                entity.Property(e => e.SubTotal).HasPrecision(18, 2);
+                entity.Property(e => e.TotalCost).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.TotalProfit).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.ProfitMargin).HasColumnType("decimal(5,2)");
+                entity.Property(e => e.IsFullyPaid).HasDefaultValue(false);
             });
 
             modelBuilder.Entity<SaleDetail>(entity =>
             {
-                entity.Property(e => e.Quantity).HasPrecision(18, 4);
-                entity.Property(e => e.UnitPrice).HasPrecision(18, 4);
-                entity.Property(e => e.Total).HasPrecision(18, 4);
+                entity.Property(e => e.UnitPrice).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.Total).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.UnitCost).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.TotalCost).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.Profit).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.Quantity).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.Discount).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.DiscountPercentage).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.NetAmount).HasColumnType("decimal(18,2)");
+
             });
 
             modelBuilder.Entity<StockTransaction>()
@@ -238,6 +274,8 @@ namespace InnomateApp.Infrastructure.Persistence
                 .WithOne(rd => rd.Return)
                 .HasForeignKey(rd => rd.ReturnId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            
         }
     }
 }

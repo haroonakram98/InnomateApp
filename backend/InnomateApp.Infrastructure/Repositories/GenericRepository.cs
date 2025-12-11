@@ -1,4 +1,5 @@
 ﻿using InnomateApp.Application.Interfaces;
+using InnomateApp.Domain.Entities.Common;
 using InnomateApp.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -13,47 +14,53 @@ namespace InnomateApp.Infrastructure.Repositories
     public class GenericRepository<T> : IGenericRepository<T> where T : class
     {
         protected readonly AppDbContext _context;
-        private readonly DbSet<T> _dbSet;
 
         public GenericRepository(AppDbContext context)
         {
             _context = context;
-            _dbSet = _context.Set<T>();
         }
 
-        public async Task<IEnumerable<T>> GetAllAsync()
+        public virtual async Task<T> GetByIdAsync(int id)
         {
-            return await _dbSet.ToListAsync();
+            return await _context.Set<T>().FindAsync(id);
         }
 
-        public async Task<T?> GetByIdAsync(int id)
+        public virtual async Task<IReadOnlyList<T>> GetAllAsync()
         {
-            return await _dbSet.FindAsync(id);
+            return await _context.Set<T>().ToListAsync();
         }
 
-        public async Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> predicate)
+        public virtual async Task<IReadOnlyList<T>> GetPagedReponseAsync(int pageNumber, int pageSize)
         {
-            return await _dbSet.Where(predicate).ToListAsync();
+            return await _context.Set<T>()
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .AsNoTracking()
+                .ToListAsync();
         }
 
-        public async Task AddAsync(T entity)
+        public virtual async Task<T> AddAsync(T entity)
         {
-            await _dbSet.AddAsync(entity);
+            await _context.Set<T>().AddAsync(entity);
+            await _context.SaveChangesAsync();
+            return entity;
         }
 
-        public void Update(T entity)
+        public virtual async Task UpdateAsync(T entity)
         {
-            _dbSet.Update(entity);
+            _context.Entry(entity).State = EntityState.Modified;
+            await _context.SaveChangesAsync();
         }
 
-        public void Delete(T entity)
+        public virtual async Task DeleteAsync(T entity)
         {
-            _dbSet.Remove(entity);
+            _context.Set<T>().Remove(entity);
+            await _context.SaveChangesAsync();
         }
 
-        public async Task<int> SaveChangesAsync()
-        {
-            return await _context.SaveChangesAsync();
-        }
+        //public virtual async Task<bool> ExistsAsync(int id)
+        //{
+        //    return await _context.Set<T>().AnyAsync(e => e.Id == id);
+        //}
     }
 }

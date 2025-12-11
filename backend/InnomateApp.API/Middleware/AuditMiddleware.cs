@@ -36,7 +36,7 @@ public sealed class AuditMiddleware
                 ElapsedMs: sw.ElapsedMilliseconds,
                 Ip: ip,
                 Details: context.Request.QueryString.HasValue ? $"Query={context.Request.QueryString.Value}" : null,
-                OccurredAtUtc: DateTime.UtcNow
+                OccurredAtUtc: DateTime.Now
             ));
         }
     }
