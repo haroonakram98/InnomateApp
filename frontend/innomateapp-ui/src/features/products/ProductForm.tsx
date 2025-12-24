@@ -34,16 +34,17 @@ export default function ProductForm({ product, onCreate, onUpdate, onCancel }: P
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
     defaultValues: {
-      name: "",
-      categoryId: 0,
-      sku: "",
-      defaultSalePrice: 0,
-      reorderLevel: 0,
-      isActive: true,
+      name: product?.name || "",
+      categoryId: product?.categoryId || 0,
+      sku: product?.sku || "",
+      defaultSalePrice: product?.defaultSalePrice || 0,
+      reorderLevel: product?.reorderLevel || 0,
+      isActive: product?.isActive ?? true,
     },
   });
 
@@ -52,28 +53,12 @@ export default function ProductForm({ product, onCreate, onUpdate, onCancel }: P
     fetchCategories();
   }, [fetchCategories]);
 
-  // Reset form when product changes
+  // Ensure category is selected once categories are loaded
   useEffect(() => {
-    if (product) {
-      reset({
-        name: product.name || "",
-        categoryId: product.categoryId || 0,
-        sku: product.sku || "",
-        defaultSalePrice: product.defaultSalePrice || 0,
-        reorderLevel: product.reorderLevel || 0,
-        isActive: product.isActive ?? true,
-      });
-    } else {
-      reset({
-        name: "",
-        categoryId: 0,
-        sku: "",
-        defaultSalePrice: 0,
-        reorderLevel: 0,
-        isActive: true,
-      });
+    if (product?.categoryId && categories.length > 0) {
+      setValue('categoryId', product.categoryId);
     }
-  }, [product, reset]);
+  }, [categories, product, setValue]);
 
   const handleFormSubmit = async (data: ProductFormData) => {
     if (product && onUpdate) {

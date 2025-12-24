@@ -11,5 +11,6 @@ namespace InnomateApp.Application.Interfaces.Services
         Task<SaleResponse?> UpdateAsync(UpdateSaleRequest request);
         Task<bool> DeleteAsync(int saleId);
         Task<string> GetNextInvoiceNumberAsync();
+        Task<SaleResponse> AddPaymentAsync(AddPaymentRequest request);
     }
 }

@@ -1,6 +1,6 @@
 // stores/useProductStore.ts
 import { create } from "zustand";
-import { ProductDTO, CreateProductDto, UpdateProductDto,ProductStockDto } from "@/types/product.js";
+import { ProductDTO, CreateProductDto, UpdateProductDto, ProductStockDto } from "@/types/product.js";
 import { productService } from "@/services/productService.js";
 import { useToastStore } from "@/store/useToastStore.js";
 import { SupplierDTO } from "@/types/supplier.js";
@@ -12,7 +12,7 @@ interface ProductState {
   selectedProduct: ProductDTO | null;
   isLoading: boolean;
   error: string | null;
-  
+
   // Actions grouped together
   actions: {
     fetchProducts: () => Promise<void>;
@@ -28,7 +28,7 @@ interface ProductState {
 export const useProductStore = create<ProductState>((set, get) => ({
   // Initial state
   products: [],
-   salesProducts: [],
+  salesProducts: [],
   selectedProduct: null,
   isLoading: false,
   error: null,
@@ -40,7 +40,6 @@ export const useProductStore = create<ProductState>((set, get) => ({
       set({ isLoading: true, error: null });
       try {
         const products = await productService.getProducts();
-        debugger
         set({ products, isLoading: false });
       } catch (error) {
         const message = error instanceof Error ? error.message : "Failed to fetch products";
@@ -54,8 +53,8 @@ export const useProductStore = create<ProductState>((set, get) => ({
       set({ error: null });
       try {
         const newProduct = await productService.createProduct(payload);
-        set((state) => ({ 
-          products: [...state.products, newProduct] 
+        set((state) => ({
+          products: [...state.products, newProduct]
         }));
         toast("Product created successfully", 'success');
       } catch (error) {
@@ -67,23 +66,23 @@ export const useProductStore = create<ProductState>((set, get) => ({
     },
 
     updateProduct: async (payload: UpdateProductDto) => {
-  const toast = useToastStore.getState().push;
-  set({ error: null });
-  try {
-    const updatedProduct = await productService.updateProduct(payload);
-    set((state) => ({
-      products: state.products.map((product) =>
-        product.productId === payload.productId ? updatedProduct : product
-      ),
-    }));
-    toast("Product updated successfully", 'success');
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to update product";
-    set({ error: message });
-    toast(message, 'error');
-    throw error;
-  }
-},
+      const toast = useToastStore.getState().push;
+      set({ error: null });
+      try {
+        const updatedProduct = await productService.updateProduct(payload);
+        set((state) => ({
+          products: state.products.map((product) =>
+            product.productId === payload.productId ? updatedProduct : product
+          ),
+        }));
+        toast("Product updated successfully", 'success');
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to update product";
+        set({ error: message });
+        toast(message, 'error');
+        throw error;
+      }
+    },
 
     deleteProduct: async (id: number) => {
       const toast = useToastStore.getState().push;
@@ -114,7 +113,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
       const toast = useToastStore.getState().push;
       set({ isLoading: true, error: null });
       try {
-        const products = await productService.fetchProductsForSale(); 
+        const products = await productService.fetchProductsForSale();
         set({ salesProducts: products, isLoading: false });
       } catch (error) {
         const message = error instanceof Error ? error.message : "Failed to fetch products";

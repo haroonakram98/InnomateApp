@@ -31,6 +31,7 @@ namespace InnomateApp.Application.Services
                 ProductId = p.ProductId,
                 Name = p.Name,
                 SKU = p.SKU,
+                CategoryId = p.CategoryId, // Fixed: Added missing CategoryId
                 CategoryName = p.Category?.Name ?? string.Empty,
                 DefaultSalePrice = p.DefaultSalePrice,
                 ReorderLevel = p.ReorderLevel,
@@ -74,15 +75,22 @@ namespace InnomateApp.Application.Services
         }
 
         // ✅ Update product details
-        public async Task<int> UpdateAsync(UpdateProductDto dto)
+        public async Task<ProductDto> UpdateAsync(UpdateProductDto dto)
         {
             var product = await _productRepo.GetByIdAsync(dto.ProductId);
             if (product == null)
                 throw new KeyNotFoundException("Product not found.");
 
             _mapper.Map(dto, product);
-            var updatedProduct = _productRepo.UpdateAsync(product);
-            return updatedProduct.Id;
+            
+            // Fixed: Await the update task properly
+            await _productRepo.UpdateAsync(product);
+            
+            // Re-fetch to get included data (Category, etc)
+            var updatedProduct = await _productRepo.GetProductWithStockInfoAsync(product.ProductId);
+
+            // Return the updated DTO so the store can update its state
+            return _mapper.Map<ProductDto>(updatedProduct);
         }
 
         // ✅ Delete product (and its stock summary)

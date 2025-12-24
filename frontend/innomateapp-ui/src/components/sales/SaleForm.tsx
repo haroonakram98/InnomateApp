@@ -38,6 +38,7 @@ import { useCustomers, useCustomerActions } from "@/store/usecustomerStore.js";
 import { useTheme } from "@/hooks/useTheme.js";
 import { CustomerDTO } from "@/types/customer.js";
 import CustomerModal from '@/components/customer/CustomerModal.js';
+import { useDebounce } from "@/hooks/useDebounce.js";
 
 // Updated schema with tax handling
 const saleSchema = z.object({
@@ -98,6 +99,7 @@ export default function SaleForm({ onClose, onShowInvoice }: SaleFormProps) {
   const { isDark } = useTheme();
 
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerDTO | null>(null);
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
@@ -237,20 +239,20 @@ export default function SaleForm({ onClose, onShowInvoice }: SaleFormProps) {
 
   // Update search results when query changes
   useEffect(() => {
-    if (searchQuery.trim() === "") {
+    if (debouncedSearchQuery.trim() === "") {
       setSearchResults([]);
       setShowSearchResults(false);
       setHighlightedIndex(0);
     } else {
       const results = salesProducts.filter(product =>
-        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.sku?.toLowerCase().includes(searchQuery.toLowerCase())
+        product.name.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+        product.sku?.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
       );
       setSearchResults(results);
       setShowSearchResults(results.length > 0);
       setHighlightedIndex(0);
     }
-  }, [searchQuery, salesProducts]);
+  }, [debouncedSearchQuery, salesProducts]);
 
   // Enhanced Keyboard Manager
   useEffect(() => {
@@ -823,6 +825,58 @@ export default function SaleForm({ onClose, onShowInvoice }: SaleFormProps) {
     }
   };
 
+  const handleEstimate = () => {
+    if (saleDetails.length === 0) {
+      toast("Add products to cart first", 'warning');
+      return;
+    }
+
+    // Prepare sale details for Preview
+    const saleDetailsPayload: any[] = saleDetails.map((item) => ({
+      productId: item.productId,
+      productName: salesProducts.find(p => p.productId === item.productId)?.name || `product #${item.productId}`,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      discount: item.discountType === '%'
+        ? (item.quantity * item.unitPrice * (item.discount || 0) / 100)
+        : (item.discount || 0),
+      discountType: item.discountType,
+      discountPercentage: item.discountType === '%' ? (item.discount || 0) : 0,
+    }));
+
+    // Calculate subtotal for global discount
+    const grossTotal = saleDetails.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+
+    const estimateSale: SaleDTO = {
+      saleId: 0, // Temporary ID
+      saleDate: new Date().toISOString(),
+      invoiceNo: `EST-${Date.now()}`, // Temporary Estimate No
+      totalAmount: total,
+      createdBy: 1,
+      createdAt: new Date().toISOString(),
+      customerId: selectedCustomer?.customerId ?? 0,
+      balanceAmount: total, // Full amount due
+      isFullyPaid: false,
+      paidAmount: 0,
+      saleDetails: saleDetailsPayload,
+      payments: [],
+      saleType: 'estimate',
+      customer: selectedCustomer || { customerId: 0, name: 'Walk-In Customer', phone: '', email: '', totalSales: 0, totalDue: 0, isActive: true }, // Ensure customer object exists
+      discount: discountType === 'invoice'
+        ? (invoiceDiscountType === '%' ? (grossTotal * (invoiceDiscount || 0) / 100) : (invoiceDiscount || 0))
+        : 0,
+      discountPercentage: discountType === 'invoice' && invoiceDiscountType === '%' ? (invoiceDiscount || 0) : 0,
+      discountType: discountType === 'invoice' ? invoiceDiscountType : 'Rs',
+      isEstimate: true // Flag for InvoicePreview
+    };
+
+    if (onShowInvoice) {
+      onShowInvoice(estimateSale);
+    } else {
+      console.warn("onShowInvoice prop not provided to SaleForm");
+    }
+  };
+
   const changeReturn = saleType === 'cash' ? Math.max(0, Number(amountReceived || 0) - total) : 0;
   const creditBalance = saleType === 'credit' ? total - Number(amountReceived || 0) : 0;
 
@@ -1000,7 +1054,7 @@ export default function SaleForm({ onClose, onShowInvoice }: SaleFormProps) {
                     }}
                     className={`flex-1 bg-transparent text-sm ${theme.text} outline-none`}
                   >
-                    <option value="">Walk In (Default)</option>
+                    <option value="">Walk-In (Default)</option>
                     {customers.map(customer => (
                       <option key={customer.customerId} value={customer.customerId}>
                         {customer.name}
@@ -1072,10 +1126,10 @@ export default function SaleForm({ onClose, onShowInvoice }: SaleFormProps) {
                   <span>Press ↑↓ to navigate, Enter to add</span>
                 </div>
                 <div className="grid gap-2">
-                  {searchResults.map((product, index) => {
+                  {searchResults.slice(0, 50).map((product, index) => {
                     const ProductIcon = Package;
                     const isOutOfStock = product.availableStock === 0;
-                    const isLowStock = product.availableStock < 10;
+                    const isLowStock = product.availableStock < product.reorderLevel;
 
                     return (
                       <div
@@ -1128,50 +1182,57 @@ export default function SaleForm({ onClose, onShowInvoice }: SaleFormProps) {
             )}
 
             {/* All Products */}
-            <div className="grid gap-2">
-              {salesProducts.map(product => {
-                const ProductIcon = Package;
-                const isOutOfStock = product.availableStock === 0;
-                const isLowStock = product.availableStock < 10;
-                return (
-                  <div
-                    key={product.productId}
-                    onClick={() => !isOutOfStock && addProductToCart(product)}
-                    className={`${theme.card} rounded-lg p-3 cursor-pointer transition-all border ${theme.borderDark + ' ' + theme.cardHover
-                      } ${isOutOfStock ? 'opacity-60 cursor-not-allowed' : ''}`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3 flex-1">
-                        <div className={`w-8 h-8 flex-shrink-0 rounded flex items-center justify-center ${isOutOfStock
-                          ? 'bg-gray-100 dark:bg-gray-900'
-                          : 'bg-blue-100 dark:bg-blue-900'
-                          }`}>
-                          <ProductIcon
-                            className={isOutOfStock ? 'text-gray-500 dark:text-gray-400' : 'text-blue-500'}
-                            size={16}
-                          />
+            {!searchQuery && (
+              <div className="grid gap-2">
+                {salesProducts.slice(0, 50).map(product => {
+                  const ProductIcon = Package;
+                  const isOutOfStock = product.availableStock === 0;
+                  const isLowStock = product.availableStock < product.reorderLevel;
+                  return (
+                    <div
+                      key={product.productId}
+                      onClick={() => !isOutOfStock && addProductToCart(product)}
+                      className={`${theme.card} rounded-lg p-3 cursor-pointer transition-all border ${theme.borderDark + ' ' + theme.cardHover
+                        } ${isOutOfStock ? 'opacity-60 cursor-not-allowed' : ''}`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3 flex-1">
+                          <div className={`w-8 h-8 flex-shrink-0 rounded flex items-center justify-center ${isOutOfStock
+                            ? 'bg-gray-100 dark:bg-gray-900'
+                            : 'bg-blue-100 dark:bg-blue-900'
+                            }`}>
+                            <ProductIcon
+                              className={isOutOfStock ? 'text-gray-500 dark:text-gray-400' : 'text-blue-500'}
+                              size={16}
+                            />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className={`text-sm font-medium ${theme.text} truncate`}>{product.name}</h3>
+                            <p className={`text-xs ${theme.textSecondary} mt-0.5`}>{product.sku} • {product.categoryName}</p>
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className={`text-sm font-medium ${theme.text} truncate`}>{product.name}</h3>
-                          <p className={`text-xs ${theme.textSecondary} mt-0.5`}>{product.sku} • {product.categoryName}</p>
+                        <div className="text-right ml-4 flex-shrink-0">
+                          <p className={`text-sm font-semibold ${theme.text}`}>Rs. {product.defaultSalePrice.toFixed(2)}</p>
+                          <p className={`text-xs ${isOutOfStock
+                            ? 'text-red-400'
+                            : isLowStock
+                              ? 'text-orange-400'
+                              : 'text-green-400'
+                            }`}>
+                            {isOutOfStock ? 'Out of Stock' : isLowStock ? `Low: ${product.availableStock}` : `${product.availableStock} in stock`}
+                          </p>
                         </div>
-                      </div>
-                      <div className="text-right ml-4 flex-shrink-0">
-                        <p className={`text-sm font-semibold ${theme.text}`}>Rs. {product.defaultSalePrice.toFixed(2)}</p>
-                        <p className={`text-xs ${isOutOfStock
-                          ? 'text-red-400'
-                          : isLowStock
-                            ? 'text-orange-400'
-                            : 'text-green-400'
-                          }`}>
-                          {isOutOfStock ? 'Out of Stock' : isLowStock ? `Low: ${product.availableStock}` : `${product.availableStock} in stock`}
-                        </p>
                       </div>
                     </div>
+                  );
+                })}
+                {salesProducts.length > 50 && (
+                  <div className={`text-center py-4 text-xs ${theme.textSecondary}`}>
+                    Showing top 50 items. Use search to find more.
                   </div>
-                );
-              })}
-            </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -1488,7 +1549,10 @@ export default function SaleForm({ onClose, onShowInvoice }: SaleFormProps) {
                 <Trash2 size={14} />
                 <span>Clear (F1)</span>
               </button>
-              <button className={`flex items-center justify-center space-x-1.5 ${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'} ${theme.text} px-3 py-2 rounded-lg transition-colors text-xs font-medium`}>
+              <button
+                onClick={handleEstimate}
+                className={`flex items-center justify-center space-x-1.5 ${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'} ${theme.text} px-3 py-2 rounded-lg transition-colors text-xs font-medium`}
+              >
                 <FileText size={14} />
                 <span>Estimate</span>
               </button>

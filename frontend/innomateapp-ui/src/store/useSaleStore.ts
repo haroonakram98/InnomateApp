@@ -37,7 +37,6 @@ export const useSaleStore = create<State>((set, get) => ({
   createSale: async (dto: CreateSaleDTO) => {
     set({ loading: true, error: null });
     try {
-      debugger
       // Validate required fields
       // if (!dto.customerId) {
       //   throw new Error("Customer ID is required");

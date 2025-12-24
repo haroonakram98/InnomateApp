@@ -1,6 +1,6 @@
 // api/products/index.ts
 import axios from "@/lib/utils/axios.js";
-import { ProductDTO, CreateProductDto, UpdateProductDto,ProductStockDto } from "../types/product.js";
+import { ProductDTO, CreateProductDto, UpdateProductDto, ProductStockDto } from "../types/product.js";
 
 export const productApi = {
   getAll: async (): Promise<ProductDTO[]> => {
@@ -28,7 +28,6 @@ export const productApi = {
   },
 
   delete: async (id: number): Promise<void> => {
-    debugger;
     await axios.delete(`/Product/${id}`);
   },
 };

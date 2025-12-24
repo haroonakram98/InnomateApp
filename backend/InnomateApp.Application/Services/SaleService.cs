@@ -47,6 +47,8 @@ namespace InnomateApp.Application.Services
                 TotalProfit = s.TotalProfit,
                 ProfitMargin = s.ProfitMargin,
                 IsFullyPaid = s.IsFullyPaid,
+                PaidAmount = s.PaidAmount,
+                BalanceAmount = s.BalanceAmount,
                 Customer = s.Customer == null ? null : new CustomerShortResponse
                 {
                     CustomerId = s.Customer.CustomerId,
@@ -290,6 +292,41 @@ namespace InnomateApp.Application.Services
 
             // Fallback if format is weird
             return $"INV-{DateTime.Now.Ticks}";
+        }
+
+        public async Task<SaleResponse> AddPaymentAsync(AddPaymentRequest request)
+        {
+            var sale = await _saleRepo.GetSaleWithDetailsAsync(request.SaleId);
+            if (sale == null) throw new Exception("Sale not found");
+
+            if (request.Amount > sale.BalanceAmount)
+            {
+                throw new Exception($"Payment amount ({request.Amount}) exceeds current balance ({sale.BalanceAmount})");
+            }
+
+            var payment = new Payment
+            {
+                SaleId = request.SaleId,
+                Amount = request.Amount,
+                PaymentMethod = request.PaymentMethod,
+                ReferenceNo = request.ReferenceNo,
+                PaymentDate = DateTime.Now
+            };
+
+            await _paymentRepo.AddAsync(payment);
+
+            // Update Sale summary
+            sale.PaidAmount += request.Amount;
+            sale.BalanceAmount -= request.Amount;
+            if (sale.BalanceAmount <= 0)
+            {
+                sale.BalanceAmount = 0;
+                sale.IsFullyPaid = true;
+            }
+
+            await _saleRepo.UpdateAsync(sale);
+
+            return await GetByIdAsync(sale.SaleId) ?? throw new Exception("Failed to retrieve updated sale");
         }
     }
 }

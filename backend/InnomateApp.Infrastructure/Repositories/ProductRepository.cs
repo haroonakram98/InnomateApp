@@ -74,5 +74,17 @@ namespace InnomateApp.Infrastructure.Repositories
 
             await _context.SaveChangesAsync();
         }
+
+        public async Task<int> CountAsync()
+        {
+            return await _context.Products.CountAsync(p => p.IsActive);
+        }
+
+        public async Task<int> CountLowStockAsync()
+        {
+            return await _context.Products
+                 .Where(p => p.IsActive && p.StockSummary != null && p.StockSummary.Balance <= p.ReorderLevel)
+                 .CountAsync();
+        }
     }
 }

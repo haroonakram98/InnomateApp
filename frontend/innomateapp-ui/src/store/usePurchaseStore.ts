@@ -75,7 +75,6 @@ export const usePurchaseStore = create<PurchaseState>((set, get) => ({
     },
 
     createPurchase: async (payload: CreatePurchaseDTO) => {
-      debugger;
       const toast = useToastStore.getState().push;
       set({ error: null });
       try {
@@ -85,7 +84,6 @@ export const usePurchaseStore = create<PurchaseState>((set, get) => ({
         }));
         toast("Purchase created successfully", 'success');
       } catch (error) {
-        debugger;
         const message = error instanceof Error ? error.message : "Failed to create purchase";
         set({ error: message });
         toast(message, 'error');

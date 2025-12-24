@@ -38,7 +38,7 @@ const InvoicePreview: React.FC<Props> = ({ sale, onClose, autoPrint, directPrint
         }
         if (!mounted) return;
 
-        const header = sale.customer?.name || sale.customerName || "Customer";
+        const header = sale.customer?.name || "Walk-In Customer";
         const lines = [
           "Your Company Name",
           header,
@@ -99,9 +99,11 @@ const InvoicePreview: React.FC<Props> = ({ sale, onClose, autoPrint, directPrint
         {/* Header */}
         <div className="flex justify-between items-center border-b px-5 py-3 bg-gray-50 sticky top-0 z-10">
           <div>
-            <h2 className="text-lg font-semibold">Invoice #{sale.invoiceNo || sale.saleId}</h2>
+            <h2 className="text-lg font-semibold">
+              {sale.isEstimate ? "Estimate / Quotation" : `Invoice #${sale.invoiceNo || sale.saleId}`}
+            </h2>
             <p className="text-xs text-gray-500">
-              {sale.saleId && sale.saleId < 0 ? "Saving..." : "Saved"}
+              {sale.isEstimate ? "Not a valid invoice" : (sale.saleId && sale.saleId < 0 ? "Saving..." : "Saved")}
             </p>
           </div>
           <div className="flex gap-2">
@@ -115,21 +117,30 @@ const InvoicePreview: React.FC<Props> = ({ sale, onClose, autoPrint, directPrint
         {/* Scrollable content */}
         <div
           ref={printRef}
-          className="overflow-y-auto px-6 py-4 flex-1 text-gray-800 font-sans text-sm"
+          className="overflow-y-auto px-6 py-4 flex-1 text-gray-800 font-sans text-sm relative"
         >
+          {/* Watermark for Estimate */}
+          {sale.isEstimate && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-10 z-0">
+              <span className="text-6xl font-black transform -rotate-45 border-4 border-gray-800 p-8 rounded-xl uppercase">
+                Estimate
+              </span>
+            </div>
+          )}
+
           {/* Header */}
-          <div className="text-center mb-4">
+          <div className="text-center mb-4 relative z-10">
             {logoData && <img src={logoData} alt="logo" className="mx-auto h-16 mb-2" />}
             <h1 className="text-2xl font-bold">Umer Electric and Sanitary Store</h1>
-            <p className="text-gray-600 text-xs">opposite side Gate.1 Al Rehman Garden phase.2 Sharaqpur Road Lahore 
- — Phone: 03234642768</p>
+            <p className="text-gray-600 text-xs">opposite side Gate.1 Al Rehman Garden phase.2 Sharaqpur Road Lahore
+              — Phone: 03234642768</p>
           </div>
 
           {/* Customer Info */}
-          <div className="grid grid-cols-2 mb-4 text-sm">
+          <div className="grid grid-cols-2 mb-4 text-sm relative z-10">
             <div>
               <p>
-                <strong>Customer:</strong> {sale.customer?.name || sale.customerName}
+                <strong>Customer:</strong> {sale.customer?.name || 'Walk-In Customer'}
               </p>
               {sale.customer?.phone && (
                 <p>
@@ -140,11 +151,16 @@ const InvoicePreview: React.FC<Props> = ({ sale, onClose, autoPrint, directPrint
             <div className="text-right">
               <p>
                 <strong>Date:</strong>{" "}
-                {new Date(sale.saleDate || "").toLocaleString()}
+                {new Date(sale.saleDate || Date.now()).toLocaleString()}
               </p>
-              <p>
-                <strong>Invoice #:</strong> {sale.invoiceNo || sale.saleId}
-              </p>
+              {!sale.isEstimate && (
+                <p>
+                  <strong>Invoice #:</strong> {sale.invoiceNo || sale.saleId}
+                </p>
+              )}
+              {sale.isEstimate && (
+                <p className="font-bold text-gray-500">ESTIMATE</p>
+              )}
             </div>
           </div>
 
@@ -182,9 +198,9 @@ const InvoicePreview: React.FC<Props> = ({ sale, onClose, autoPrint, directPrint
             </div>
           </div>
 
-          {/* Payments */}
-          {sale.payments?.length > 0 && (
-            <div className="mt-4">
+          {/* Payments - Hide for Estimates */}
+          {!sale.isEstimate && sale.payments?.length > 0 && (
+            <div className="mt-4 relative z-10">
               <h3 className="font-semibold mb-1">Payments</h3>
               <ul className="list-disc pl-5 text-sm">
                 {sale.payments.map((p, i) => (

@@ -187,5 +187,120 @@ namespace InnomateApp.Infrastructure.Repositories
                 .Select(s => s.InvoiceNo)
                 .FirstOrDefaultAsync();
         }
+
+        public async Task<decimal> GetTotalRevenueAsync()
+        {
+            // Sum of TotalAmount for all non-deleted sales
+            return await _context.Sales
+                .Where(s => !s.IsDeleted)
+                .SumAsync(s => s.TotalAmount);
+        }
+
+        public async Task<decimal> GetTotalProfitAsync()
+        {
+            // Sum of TotalProfit for all non-deleted sales
+            return await _context.Sales
+                .Where(s => !s.IsDeleted)
+                .SumAsync(s => s.TotalProfit);
+        }
+
+        public async Task<int> GetTotalSalesCountAsync()
+        {
+            return await _context.Sales.Where(s => !s.IsDeleted).CountAsync();
+        }
+
+        public async Task<(decimal Revenue, decimal Profit, int Count)> GetDailyStatsAsync(DateTime date)
+        {
+            var startOfDay = date.Date;
+            var endOfDay = date.Date.AddDays(1).AddTicks(-1);
+
+            var dailyStats = await _context.Sales
+                .Where(s => !s.IsDeleted && s.SaleDate >= startOfDay && s.SaleDate <= endOfDay)
+                .GroupBy(s => 1)
+                .Select(g => new
+                {
+                    Revenue = g.Sum(s => s.TotalAmount),
+                    Profit = g.Sum(s => s.TotalProfit),
+                    Count = g.Count()
+                })
+                .FirstOrDefaultAsync();
+
+            return (dailyStats?.Revenue ?? 0, dailyStats?.Profit ?? 0, dailyStats?.Count ?? 0);
+        }
+        
+        public async Task<IReadOnlyList<Sale>> GetRecentSalesAsync(int count)
+        {
+             return await _context.Sales
+                .Where(s => !s.IsDeleted)
+                .OrderByDescending(s => s.SaleDate)
+                .Take(count)
+                .Include(s => s.Customer)
+                .AsNoTracking()
+                .ToListAsync();
+        }
+        
+        public async Task<IEnumerable<(DateTime Date, decimal Revenue, decimal Profit)>> GetPerformanceStatsAsync(DateTime startDate, DateTime endDate)
+        {
+            var stats = await _context.Sales
+                .Where(s => !s.IsDeleted && s.SaleDate >= startDate && s.SaleDate <= endDate)
+                .GroupBy(s => s.SaleDate.Date)
+                .Select(g => new
+                {
+                    Date = g.Key,
+                    Revenue = g.Sum(s => s.TotalAmount),
+                    Profit = g.Sum(s => s.TotalProfit)
+                })
+                .OrderBy(x => x.Date)
+                .ToListAsync();
+
+            return stats.Select(x => (x.Date, x.Revenue, x.Profit));
+        }
+
+        public async Task<(int Paid, int Unpaid, int Overdue)> GetInvoiceStatsAsync()
+        {
+            var today = DateTime.Now;
+            var thirtyDaysAgo = today.AddDays(-30);
+
+            var paid = await _context.Sales.Where(s => !s.IsDeleted && s.IsFullyPaid).CountAsync();
+            
+            // Unpaid logic: Not fully paid
+            // We can split Unpaid into "Overdue" (older than 30 days) and "Pending" (newer)
+            // Or "Unpaid" represents ALL unpaid, and "Overdue" is a subset?
+            // Usually in charts: Paid + Unpaid + Overdue should sum up to Total, OR they are distinct categories.
+            // If the chart is a pie chart of 3 slices, they must be distinct.
+            // So:
+            // Paid = Fully Paid
+            // Overdue = Not Fully Paid AND SaleDate < 30 days ago
+            // Unpaid (Pending) = Not Fully Paid AND SaleDate >= 30 days ago
+            
+            var overdue = await _context.Sales
+                .Where(s => !s.IsDeleted && !s.IsFullyPaid && s.SaleDate < thirtyDaysAgo)
+                .CountAsync();
+
+            var pending = await _context.Sales
+                .Where(s => !s.IsDeleted && !s.IsFullyPaid && s.SaleDate >= thirtyDaysAgo)
+                .CountAsync();
+
+            return (paid, pending, overdue);
+        }
+
+        public async Task<(decimal Revenue, decimal Profit, int Count)> GetPeriodStatsAsync(DateTime startDate, DateTime endDate)
+        {
+            // Adjust endDate to include the full day
+            var actualEndDate = endDate.Date.AddDays(1).AddTicks(-1);
+
+            var stats = await _context.Sales
+                .Where(s => !s.IsDeleted && s.SaleDate >= startDate.Date && s.SaleDate <= actualEndDate)
+                .GroupBy(s => 1)
+                .Select(g => new
+                {
+                    Revenue = g.Sum(s => s.TotalAmount),
+                    Profit = g.Sum(s => s.TotalProfit),
+                    Count = g.Count()
+                })
+                .FirstOrDefaultAsync();
+
+            return (stats?.Revenue ?? 0, stats?.Profit ?? 0, stats?.Count ?? 0);
+        }
     }
 }

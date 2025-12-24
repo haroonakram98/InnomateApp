@@ -16,5 +16,7 @@ namespace InnomateApp.Application.Interfaces
         Task<bool> ProductSkuExistsAsync(string sku);
         Task<IReadOnlyList<Product>> SearchProductsAsync(string searchTerm);
         Task DeactivateAsync(int id);
+        Task<int> CountAsync();
+        Task<int> CountLowStockAsync();
     }
 }

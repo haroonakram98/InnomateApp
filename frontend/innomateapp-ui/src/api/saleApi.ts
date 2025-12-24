@@ -15,7 +15,6 @@ export const getSaleById = async (id: number): Promise<SaleDTO> => {
 };
 
 export const createSale = async (data: CreateSaleDTO): Promise<SaleDTO> => {
-  debugger
   const res = await axios.post(BASE_URL, data);
   return res.data;
 };
@@ -60,7 +59,10 @@ export const addPaymentToSale = async (saleId: number, paymentData: {
   amount: number;
   referenceNo?: string;
 }): Promise<SaleDTO> => {
-  const res = await axios.post(`${BASE_URL}/${saleId}/payments`, paymentData);
+  const res = await axios.post(`${BASE_URL}/${saleId}/payments`, {
+    ...paymentData,
+    saleId
+  });
   return res.data;
 };
 

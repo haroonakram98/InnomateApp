@@ -42,7 +42,7 @@
         public DateTime SaleDate { get; set; }
         public string InvoiceNo { get; set; } = string.Empty;
         public int? CustomerId { get; set; }
-        public string? CustomerName { get; set; }
+
         public decimal TotalAmount { get; set; }
         public int CreatedBy { get; set; }
         public DateTime CreatedAt { get; set; }

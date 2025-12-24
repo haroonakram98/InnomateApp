@@ -44,7 +44,7 @@ namespace InnomateApp.Application.DTOs
 
         public bool IsActive { get; set; } = true;
 
-        [Range(0.01, double.MaxValue)]
+        [Range(typeof(decimal), "0", "79228162514264337593543950335")]
         public decimal DefaultSalePrice { get; set; }
     }
 

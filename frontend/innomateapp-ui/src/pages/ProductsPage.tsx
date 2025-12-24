@@ -13,11 +13,11 @@ import {
 import { ProductDTO, CreateProductDto, UpdateProductDto } from '@/types/product.js';
 import { useTheme } from '@/hooks/useTheme.js';
 import MainLayout from '@/components/layout/MainLayout.js';
-import { 
-  useProducts, 
-  useProductsLoading, 
+import {
+  useProducts,
+  useProductsLoading,
   useProductsError,
-  useProductActions 
+  useProductActions
 } from '@/store/useProductStore.js';
 import ProductForm from '@/features/products/ProductForm.js';
 
@@ -42,25 +42,25 @@ export default function ProductsPage() {
     bgCard: isDark ? 'bg-gray-800' : 'bg-white',
     bgSecondary: isDark ? 'bg-gray-700' : 'bg-gray-50',
     bgHover: isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100',
-    
+
     // Text colors
     text: isDark ? 'text-gray-100' : 'text-gray-900',
     textSecondary: isDark ? 'text-gray-400' : 'text-gray-600',
     textMuted: isDark ? 'text-gray-500' : 'text-gray-500',
-    
+
     // Border colors
     border: isDark ? 'border-gray-700' : 'border-gray-200',
     borderLight: isDark ? 'border-gray-600' : 'border-gray-100',
-    
+
     // Input colors
-    input: isDark 
-      ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400 focus:border-blue-500' 
+    input: isDark
+      ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400 focus:border-blue-500'
       : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-blue-500',
-    
+
     // Button colors
     buttonPrimary: 'bg-blue-600 hover:bg-blue-700 text-white',
-    buttonSecondary: isDark 
-      ? 'bg-gray-700 hover:bg-gray-600 text-gray-100' 
+    buttonSecondary: isDark
+      ? 'bg-gray-700 hover:bg-gray-600 text-gray-100'
       : 'bg-gray-200 hover:bg-gray-300 text-gray-700',
   };
 
@@ -107,7 +107,7 @@ export default function ProductsPage() {
     if (
       !confirm(
         `Are you sure you want to ${actionText} "${product.name}"?` +
-        (product.isActive 
+        (product.isActive
           ? ' It will no longer be available for new sales or purchases, but existing records will remain.'
           : ' It will become available again for new sales and purchases.'
         )
@@ -174,16 +174,14 @@ export default function ProductsPage() {
 
         {/* Error Alert */}
         {error && (
-          <div className={`mb-4 p-4 rounded-lg border ${
-            isDark ? 'bg-red-900/20 border-red-800 text-red-200' : 'bg-red-50 border-red-200 text-red-700'
-          }`}>
+          <div className={`mb-4 p-4 rounded-lg border ${isDark ? 'bg-red-900/20 border-red-800 text-red-200' : 'bg-red-50 border-red-200 text-red-700'
+            }`}>
             <div className="flex justify-between items-start">
               <span>{error}</span>
               <button
                 onClick={handleClearError}
-                className={`p-1 rounded ${
-                  isDark ? 'hover:bg-red-800' : 'hover:bg-red-100'
-                }`}
+                className={`p-1 rounded ${isDark ? 'hover:bg-red-800' : 'hover:bg-red-100'
+                  }`}
               >
                 <X size={16} />
               </button>
@@ -205,9 +203,8 @@ export default function ProductsPage() {
             {searchQuery && (
               <button
                 onClick={clearSearch}
-                className={`absolute right-2 top-1/2 transform -translate-y-1/2 p-1 rounded ${
-                  isDark ? 'hover:bg-gray-600' : 'hover:bg-gray-200'
-                }`}
+                className={`absolute right-2 top-1/2 transform -translate-y-1/2 p-1 rounded ${isDark ? 'hover:bg-gray-600' : 'hover:bg-gray-200'
+                  }`}
               >
                 <X size={14} className={theme.textMuted} />
               </button>
@@ -248,7 +245,7 @@ export default function ProductsPage() {
                   <>
                     <Package size={48} className="mb-2 opacity-50" />
                     <p>No products found for "{searchQuery}"</p>
-                    <button 
+                    <button
                       onClick={clearSearch}
                       className="mt-2 text-blue-500 hover:text-blue-700 text-sm"
                     >
@@ -266,11 +263,10 @@ export default function ProductsPage() {
               currentProducts.map((product, index) => (
                 <div
                   key={product.productId}
-                  className={`grid grid-cols-12 gap-4 px-6 py-4 border-b transition-colors ${
-                    index % 2 === 0 
-                      ? isDark ? 'bg-gray-800' : 'bg-white' 
+                  className={`grid grid-cols-12 gap-4 px-6 py-4 border-b transition-colors ${index % 2 === 0
+                      ? isDark ? 'bg-gray-800' : 'bg-white'
                       : isDark ? 'bg-gray-750' : 'bg-gray-50'
-                  } ${theme.borderLight} ${theme.bgHover}`}
+                    } ${theme.borderLight} ${theme.bgHover}`}
                 >
                   <div className={`col-span-1 text-sm font-medium ${theme.text}`}>
                     {product.productId}
@@ -290,34 +286,31 @@ export default function ProductsPage() {
                   <div className={`col-span-1 text-sm ${theme.text}`}>
                     {product.reorderLevel || 0}
                   </div>
-                  <div className={`col-span-1 text-sm ${
-                    product.isActive ? 'text-green-600' : 'text-red-600'
-                  }`}>
+                  <div className={`col-span-1 text-sm ${product.isActive ? 'text-green-600' : 'text-red-600'
+                    }`}>
                     {product.isActive ? 'Yes' : 'No'}
                   </div>
                   <div className="col-span-3 flex justify-center gap-3">
                     <button
                       onClick={() => startEdit(product)}
-                      className={`flex items-center gap-1 px-3 py-1 rounded text-sm transition-colors ${
-                        isDark 
-                          ? 'text-green-400 hover:text-green-300 hover:bg-gray-700' 
+                      className={`flex items-center gap-1 px-3 py-1 rounded text-sm transition-colors ${isDark
+                          ? 'text-green-400 hover:text-green-300 hover:bg-gray-700'
                           : 'text-green-600 hover:text-green-800 hover:bg-gray-100'
-                      }`}
+                        }`}
                     >
                       <Edit2 size={16} />
                       Edit
                     </button>
                     <button
                       onClick={() => handleToggleActive(product)}
-                      className={`flex items-center gap-1 px-3 py-1 rounded text-sm transition-colors ${
-                        product.isActive
-                          ? (isDark 
-                              ? 'text-yellow-300 hover:text-yellow-200 hover:bg-gray-700' 
-                              : 'text-yellow-600 hover:text-yellow-800 hover:bg-gray-100')
+                      className={`flex items-center gap-1 px-3 py-1 rounded text-sm transition-colors ${product.isActive
+                          ? (isDark
+                            ? 'text-yellow-300 hover:text-yellow-200 hover:bg-gray-700'
+                            : 'text-yellow-600 hover:text-yellow-800 hover:bg-gray-100')
                           : (isDark
-                              ? 'text-blue-300 hover:text-blue-200 hover:bg-gray-700'
-                              : 'text-blue-600 hover:text-blue-800 hover:bg-gray-100')
-                      }`}
+                            ? 'text-blue-300 hover:text-blue-200 hover:bg-gray-700'
+                            : 'text-blue-600 hover:text-blue-800 hover:bg-gray-100')
+                        }`}
                     >
                       <Trash2 size={16} />
                       {product.isActive ? 'Deactivate' : 'Activate'}
@@ -339,11 +332,10 @@ export default function ProductsPage() {
                   <button
                     onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                     disabled={currentPage === 1}
-                    className={`p-2 rounded border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                      isDark 
-                        ? 'border-gray-600 hover:bg-gray-700' 
+                    className={`p-2 rounded border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${isDark
+                        ? 'border-gray-600 hover:bg-gray-700'
                         : 'border-gray-300 hover:bg-gray-100'
-                    }`}
+                      }`}
                   >
                     <ChevronLeft size={16} className={theme.text} />
                   </button>
@@ -353,11 +345,10 @@ export default function ProductsPage() {
                   <button
                     onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                     disabled={currentPage === totalPages}
-                    className={`p-2 rounded border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                      isDark 
-                        ? 'border-gray-600 hover:bg-gray-700' 
+                    className={`p-2 rounded border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${isDark
+                        ? 'border-gray-600 hover:bg-gray-700'
                         : 'border-gray-300 hover:bg-gray-100'
-                    }`}
+                      }`}
                   >
                     <ChevronRight size={16} className={theme.text} />
                   </button>
@@ -378,9 +369,8 @@ export default function ProductsPage() {
                   </h3>
                   <button
                     onClick={cancelEdit}
-                    className={`p-2 rounded-lg transition-colors ${
-                      isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
-                    }`}
+                    className={`p-2 rounded-lg transition-colors ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+                      }`}
                   >
                     <X size={20} className={theme.text} />
                   </button>
@@ -389,6 +379,7 @@ export default function ProductsPage() {
 
               <div className="max-h-[80vh] overflow-y-auto">
                 <ProductForm
+                  key={editingProduct ? editingProduct.productId : 'new'}
                   product={editingProduct}
                   onCreate={isCreating ? handleCreate : undefined}
                   onUpdate={editingProduct ? handleUpdate : undefined}

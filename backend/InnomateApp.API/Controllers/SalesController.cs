@@ -62,5 +62,22 @@ namespace InnomateApp.API.Controllers
             var nextInvoiceNo = await _saleService.GetNextInvoiceNumberAsync();
             return Ok(new { invoiceNo = nextInvoiceNo });
         }
+
+        [HttpPost("{id:int}/payments")]
+        public async Task<IActionResult> AddPayment(int id, [FromBody] AddPaymentRequest request)
+        {
+            try
+            {
+                if (id != request.SaleId) return BadRequest("Sale ID mismatch");
+                if (!ModelState.IsValid) return BadRequest(ModelState);
+                
+                var result = await _saleService.AddPaymentAsync(request);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
     }
 }

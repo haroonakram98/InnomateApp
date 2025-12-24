@@ -95,7 +95,7 @@ export default function SaleDetailsModal({ sale, onClose }: SaleDetailsModalProp
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <p className={`text-xs ${theme.textSecondary}`}>Customer Name</p>
-                                    <p className={`font-medium ${theme.text}`}>{sale.customerName || sale.customer?.name || 'Walk In'}</p>
+                                    <p className={`font-medium ${theme.text}`}>{sale.customer?.name || 'Walk-In Customer'}</p>
                                 </div>
                                 {sale.customer?.phone && (
                                     <div>

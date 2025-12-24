@@ -23,5 +23,18 @@ namespace InnomateApp.Infrastructure.Repositories
         {
             return await _context.Customers.FirstOrDefaultAsync(c => c.Email == email);
         }
+        
+
+        public async Task<int> CountAsync()
+        {
+             return await _context.Customers.CountAsync();
+        }
+
+        public async Task<int> CountAsync(DateTime startDate, DateTime endDate)
+        {
+            // Adjust endDate to include the full day
+            var actualEndDate = endDate.Date.AddDays(1).AddTicks(-1);
+            return await _context.Customers.CountAsync(c => c.CreatedAt >= startDate.Date && c.CreatedAt <= actualEndDate);
+        }
     }
 }

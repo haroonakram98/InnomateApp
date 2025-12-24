@@ -7,7 +7,7 @@ namespace InnomateApp.Application.Interfaces
         Task<IEnumerable<ProductDto>> GetAllAsync();
         Task<ProductDto?> GetByIdAsync(int id);
         Task<ProductDto> CreateAsync(CreateProductDto dto);
-        Task<int> UpdateAsync(UpdateProductDto dto);
+        Task<ProductDto> UpdateAsync(UpdateProductDto dto);
         Task<int> DeleteAsync(int id);
         Task DeactivateAsync(int id);
         Task<IEnumerable<ProductStockDto>> GetProductsForSale();

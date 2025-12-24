@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-type Toast = { id: number; message: string; type?: 'success'|'error'|'info'|'warning' };
+type Toast = { id: number; message: string; type?: 'success' | 'error' | 'info' | 'warning' };
 type State = {
   toasts: Toast[];
   push: (m: string, t?: Toast['type']) => void;
@@ -9,7 +9,10 @@ type State = {
 
 export const useToastStore = create<State>((set) => ({
   toasts: [],
-  push: (message, type='info') =>
-    set((s) => ({ toasts: [...s.toasts, { id: Date.now(), message, type }] })),
+  push: (message, type = 'info') =>
+    set((s) => {
+      if (s.toasts.some(t => t.message === message)) return s; // Prevent duplicates
+      return { toasts: [...s.toasts, { id: Date.now(), message, type }] };
+    }),
   remove: (id) => set((s) => ({ toasts: s.toasts.filter(t => t.id !== id) })),
 }));

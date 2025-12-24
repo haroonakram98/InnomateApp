@@ -10,5 +10,7 @@ namespace InnomateApp.Application.Interfaces
     public interface ICustomerRepository : IGenericRepository<Customer>
     {
         Task<Customer?> GetByEmailAsync(string email);
+        Task<int> CountAsync();
+        Task<int> CountAsync(DateTime startDate, DateTime endDate);
     }
 }

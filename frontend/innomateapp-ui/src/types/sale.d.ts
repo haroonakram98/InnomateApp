@@ -34,7 +34,7 @@ export type SaleDTO = {
   balanceAmount: number;
   isFullyPaid: boolean;
   paidAmount: number;
-  
+
   // New fields from database
   deletedAt?: string | null;
   isDeleted?: boolean;
@@ -46,16 +46,17 @@ export type SaleDTO = {
   discountPercentage?: number;
   subTotal?: number;
   discountType?: string;
-  
+
   // Related data
   saleDetails: SaleDetailDTO[];
   payments: PaymentDTO[];
   customer?: CustomerDTO;
-  customerName?: string;
-  
+
+
   // Optional fields for UI
   saleType?: string;
   dueDate?: string;
+  isEstimate?: boolean;
 };
 
 export type CreateSaleDetailDTO = {

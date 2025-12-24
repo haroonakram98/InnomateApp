@@ -105,7 +105,7 @@ export default function ReturnModal({ sale, onClose }: ReturnModalProps) {
                                 <span className={`text-sm ${theme.textSecondary}`}>Sale #{sale.saleId}</span>
                                 <span className={theme.textSecondary}>•</span>
                                 <span className={`text-sm font-medium ${theme.text}`}>
-                                    {sale.customerName || sale.customer?.name || 'Walk In Customer'}
+                                    {sale.customer?.name || 'Walk-In Customer'}
                                 </span>
                             </div>
                         </div>

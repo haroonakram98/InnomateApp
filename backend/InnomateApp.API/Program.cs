@@ -37,6 +37,7 @@ builder.Services.AddScoped<IStockService, StockService>();
 builder.Services.AddScoped<IPurchaseService, PurchaseService>();
 builder.Services.AddScoped<ISupplierService, SupplierService>();
 builder.Services.AddScoped<IReturnService, ReturnService>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
 // Infrastructure repositories
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 builder.Services.AddScoped<IRoleRepository, RoleRepository>();

@@ -205,19 +205,17 @@ export default function StockPage() {
         {/* Error Alert */}
         {error && (
           <div
-            className={`mb-4 p-4 rounded-lg border ${
-              isDark
+            className={`mb-4 p-4 rounded-lg border ${isDark
                 ? "bg-red-900/20 border-red-800 text-red-200"
                 : "bg-red-50 border-red-200 text-red-700"
-            }`}
+              }`}
           >
             <div className="flex justify-between items-start gap-4">
               <span>{error}</span>
               <button
                 onClick={clearError}
-                className={`p-1 rounded ${
-                  isDark ? "hover:bg-red-800" : "hover:bg-red-100"
-                }`}
+                className={`p-1 rounded ${isDark ? "hover:bg-red-800" : "hover:bg-red-100"
+                  }`}
               >
                 <X size={16} />
               </button>
@@ -241,9 +239,8 @@ export default function StockPage() {
             {search && (
               <button
                 onClick={() => setSearch("")}
-                className={`absolute right-2 top-1/2 transform -translate-y-1/2 p-1 rounded ${
-                  isDark ? "hover:bg-gray-600" : "hover:bg-gray-200"
-                }`}
+                className={`absolute right-2 top-1/2 transform -translate-y-1/2 p-1 rounded ${isDark ? "hover:bg-gray-600" : "hover:bg-gray-200"
+                  }`}
               >
                 <X size={14} className={theme.textMuted} />
               </button>
@@ -272,9 +269,9 @@ export default function StockPage() {
             <div className="col-span-1 text-right">Out</div>
             <div className="col-span-1 text-right">Balance</div>
             <div className="col-span-1 text-right">Avg. Cost</div>
-            <div className="col-span-2 text-right">Total Value</div>
+            <div className="col-span-1 text-right">Total Value</div>
             <div className="col-span-2">Last Updated</div>
-            <div className="col-span-2 text-center">Actions</div>
+            <div className="col-span-3 text-center">Actions</div>
           </div>
 
           {/* Body */}
@@ -307,15 +304,14 @@ export default function StockPage() {
                 return (
                   <div
                     key={s.stockSummaryId}
-                    className={`grid grid-cols-12 gap-4 px-6 py-3 border-b text-sm items-center transition-colors ${
-                      index % 2 === 0
+                    className={`grid grid-cols-12 gap-4 px-6 py-3 border-b text-sm items-center transition-colors ${index % 2 === 0
                         ? isDark
                           ? "bg-gray-800"
                           : "bg-white"
                         : isDark
-                        ? "bg-gray-900/40"
-                        : "bg-gray-50"
-                    } ${theme.borderLight} ${theme.bgHover}`}
+                          ? "bg-gray-900/40"
+                          : "bg-gray-50"
+                      } ${theme.borderLight} ${theme.bgHover}`}
                   >
                     {/* Product */}
                     <div className="col-span-2 flex flex-col">
@@ -344,9 +340,8 @@ export default function StockPage() {
                     {/* Balance */}
                     <div className="col-span-1 text-right">
                       <span
-                        className={`inline-flex items-center justify-end px-2 py-0.5 rounded-full text-xs font-medium ${
-                          isNegative ? theme.chipNegative : theme.chipPositive
-                        }`}
+                        className={`inline-flex items-center justify-end px-2 py-0.5 rounded-full text-xs font-medium ${isNegative ? theme.chipNegative : theme.chipPositive
+                          }`}
                       >
                         {formatNumber(s.balance)}
                       </span>
@@ -360,7 +355,7 @@ export default function StockPage() {
                     </div>
 
                     {/* Total Value */}
-                    <div className="col-span-2 text-right">
+                    <div className="col-span-1 text-right">
                       <span className={theme.text}>
                         {formatNumber(s.totalValue)}
                       </span>
@@ -374,7 +369,7 @@ export default function StockPage() {
                     </div>
 
                     {/* Actions */}
-                    <div className="col-span-2 flex justify-center gap-2">
+                    <div className="col-span-3 flex justify-center gap-2">
                       <button
                         onClick={() => openTransactionsModal(s)}
                         className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${theme.buttonSecondary}`}
@@ -422,11 +417,10 @@ export default function StockPage() {
                     setCurrentPage((p) => Math.max(1, p - 1))
                   }
                   disabled={currentPage === 1}
-                  className={`p-2 rounded border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                    isDark
+                  className={`p-2 rounded border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${isDark
                       ? "border-gray-600 hover:bg-gray-700"
                       : "border-gray-300 hover:bg-gray-100"
-                  }`}
+                    }`}
                 >
                   <ChevronLeft size={16} className={theme.text} />
                 </button>
@@ -438,11 +432,10 @@ export default function StockPage() {
                     setCurrentPage((p) => Math.min(totalPages, p + 1))
                   }
                   disabled={currentPage === totalPages}
-                  className={`p-2 rounded border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                    isDark
+                  className={`p-2 rounded border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${isDark
                       ? "border-gray-600 hover:bg-gray-700"
                       : "border-gray-300 hover:bg-gray-100"
-                  }`}
+                    }`}
                 >
                   <ChevronRight size={16} className={theme.text} />
                 </button>
@@ -454,19 +447,17 @@ export default function StockPage() {
         {/* Modal shared error */}
         {modalError && (
           <div
-            className={`mt-4 p-3 rounded-lg border text-sm max-w-xl ${
-              isDark
+            className={`mt-4 p-3 rounded-lg border text-sm max-w-xl ${isDark
                 ? "bg-red-900/20 border-red-800 text-red-200"
                 : "bg-red-50 border-red-200 text-red-700"
-            }`}
+              }`}
           >
             <div className="flex justify-between items-start gap-4">
               <span>{modalError}</span>
               <button
                 onClick={clearModalError}
-                className={`p-1 rounded ${
-                  isDark ? "hover:bg-red-800" : "hover:bg-red-100"
-                }`}
+                className={`p-1 rounded ${isDark ? "hover:bg-red-800" : "hover:bg-red-100"
+                  }`}
               >
                 <X size={14} />
               </button>
@@ -493,9 +484,8 @@ export default function StockPage() {
                 </div>
                 <button
                   onClick={closeTransactionsModal}
-                  className={`p-1.5 rounded-lg ${
-                    isDark ? "hover:bg-gray-700" : "hover:bg-gray-100"
-                  }`}
+                  className={`p-1.5 rounded-lg ${isDark ? "hover:bg-gray-700" : "hover:bg-gray-100"
+                    }`}
                 >
                   <X size={18} />
                 </button>
@@ -526,15 +516,13 @@ export default function StockPage() {
                     {transactions.map((tx, i) => (
                       <div
                         key={tx.stockTransactionId}
-                        className={`grid grid-cols-12 gap-4 py-2 border-b last:border-0 ${
-                          theme.borderLight
-                        } ${
-                          i % 2 === 0
+                        className={`grid grid-cols-12 gap-4 py-2 border-b last:border-0 ${theme.borderLight
+                          } ${i % 2 === 0
                             ? isDark
                               ? "bg-gray-800/40"
                               : "bg-gray-50"
                             : ""
-                        }`}
+                          }`}
                       >
                         <div className="col-span-2">
                           <span className={theme.textSecondary}>
@@ -605,9 +593,8 @@ export default function StockPage() {
                 </div>
                 <button
                   onClick={closeBatchesModal}
-                  className={`p-1.5 rounded-lg ${
-                    isDark ? "hover:bg-gray-700" : "hover:bg-gray-100"
-                  }`}
+                  className={`p-1.5 rounded-lg ${isDark ? "hover:bg-gray-700" : "hover:bg-gray-100"
+                    }`}
                 >
                   <X size={18} />
                 </button>
@@ -637,15 +624,13 @@ export default function StockPage() {
                     {batches.map((b, i) => (
                       <div
                         key={b.purchaseDetailId}
-                        className={`grid grid-cols-12 gap-4 py-2 border-b last:border-0 ${
-                          theme.borderLight
-                        } ${
-                          i % 2 === 0
+                        className={`grid grid-cols-12 gap-4 py-2 border-b last:border-0 ${theme.borderLight
+                          } ${i % 2 === 0
                             ? isDark
                               ? "bg-gray-800/40"
                               : "bg-gray-50"
                             : ""
-                        }`}
+                          }`}
                       >
                         <div className="col-span-3">
                           <span className={theme.text}>

@@ -32,7 +32,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     { icon: Home, label: "Dashboard", path: "/dashboard" },
     { icon: ShoppingBag, label: "POS", path: "/sales/new" },
     { icon: ShoppingCart, label: "Sales", path: "/sales" },
-    { icon: Truck, label: "Purchases", path: "/purchases" }, 
+    { icon: Truck, label: "Purchases", path: "/purchases" },
     { icon: Package, label: "Stocks", path: "/stocks" },
     { icon: Package, label: "Products", path: "/products" },
     { icon: Tag, label: "Categories", path: "/categories" }, // Added Categories
@@ -54,45 +54,38 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   };
 
   return (
-    <div className={`flex h-screen font-sans ${
-      isDark 
-        ? 'bg-gray-900 text-gray-200' 
-        : 'bg-gray-100 text-gray-800'
-    }`}>
+    <div className={`flex h-screen font-sans ${isDark
+      ? 'bg-gray-900 text-gray-200'
+      : 'bg-gray-100 text-gray-800'
+      }`}>
       {/* Sidebar */}
-      <aside className={`flex flex-col transition-all duration-300 ${
-        isSidebarCollapsed ? 'w-16' : 'w-64'
-      } border-r ${
-        isDark 
-          ? 'bg-gray-800 border-gray-700' 
+      <aside className={`flex flex-col transition-all duration-300 ${isSidebarCollapsed ? 'w-16' : 'w-64'
+        } border-r ${isDark
+          ? 'bg-gray-800 border-gray-700'
           : 'bg-white border-gray-200'
-      } shadow-lg z-30`}>
+        } shadow-lg z-30`}>
         {/* Sidebar Header */}
-        <div className={`flex items-center ${
-          isSidebarCollapsed ? 'justify-center' : 'justify-between'
-        } h-16 border-b px-4 ${
-          isDark ? 'border-gray-700' : 'border-gray-200'
-        }`}>
+        <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'justify-between'
+          } h-16 border-b px-4 ${isDark ? 'border-gray-700' : 'border-gray-200'
+          }`}>
           {!isSidebarCollapsed && (
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
                 <ShoppingBag size={20} className="text-white" />
               </div>
-              <h1 className={`text-lg font-bold ${
-                isDark ? 'text-white' : 'text-gray-900'
-              }`}>
+              <h1 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'
+                }`}>
                 SmartOps
               </h1>
             </div>
           )}
-          
+
           <button
             onClick={toggleSidebar}
-            className={`p-2 rounded-lg transition-colors ${
-              isDark 
-                ? 'hover:bg-gray-700 text-gray-400' 
-                : 'hover:bg-gray-100 text-gray-500'
-            }`}
+            className={`p-2 rounded-lg transition-colors ${isDark
+              ? 'hover:bg-gray-700 text-gray-400'
+              : 'hover:bg-gray-100 text-gray-500'
+              }`}
             title={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             {isSidebarCollapsed ? (
@@ -102,20 +95,19 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             )}
           </button>
         </div>
-        
+
         {/* Navigation Menu */}
         <nav className="flex-grow flex flex-col py-4 space-y-1 px-3">
           {menu.map((item, idx) => (
             <button
               key={idx}
               onClick={() => navigate(item.path)}
-              className={`flex items-center gap-3 w-full p-3 rounded-lg transition-all ${
-                isActivePath(item.path)
-                  ? "bg-blue-500 text-white shadow-lg shadow-blue-500/25"
-                  : isDark 
-                    ? "text-gray-400 hover:bg-gray-700 hover:text-gray-200" 
-                    : "text-gray-600 hover:bg-gray-100 hover:text-gray-800"
-              } ${isSidebarCollapsed ? 'justify-center' : ''}`}
+              className={`flex items-center gap-3 w-full p-3 rounded-lg transition-all ${isActivePath(item.path)
+                ? "bg-blue-500 text-white shadow-lg shadow-blue-500/25"
+                : isDark
+                  ? "text-gray-400 hover:bg-gray-700 hover:text-gray-200"
+                  : "text-gray-600 hover:bg-gray-100 hover:text-gray-800"
+                } ${isSidebarCollapsed ? 'justify-center' : ''}`}
               title={isSidebarCollapsed ? item.label : ""}
             >
               <item.icon size={20} className="flex-shrink-0" />
@@ -127,19 +119,17 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             </button>
           ))}
         </nav>
-          
+
         {/* Sidebar Footer */}
-        <div className={`p-4 border-t ${
-          isDark ? 'border-gray-700' : 'border-gray-200'
-        } space-y-4`}>
+        <div className={`p-4 border-t ${isDark ? 'border-gray-700' : 'border-gray-200'
+          } space-y-4`}>
           {/* Theme Toggle */}
           <button
             onClick={toggleTheme}
-            className={`flex items-center gap-3 w-full p-3 rounded-lg transition-colors ${
-              isDark 
-                ? 'hover:bg-gray-700 text-gray-400' 
-                : 'hover:bg-gray-100 text-gray-600'
-            } ${isSidebarCollapsed ? 'justify-center' : ''}`}
+            className={`flex items-center gap-3 w-full p-3 rounded-lg transition-colors ${isDark
+              ? 'hover:bg-gray-700 text-gray-400'
+              : 'hover:bg-gray-100 text-gray-600'
+              } ${isSidebarCollapsed ? 'justify-center' : ''}`}
             title={isSidebarCollapsed ? "Toggle Theme" : ""}
           >
             {isDark ? <Sun size={20} /> : <Moon size={20} />}
@@ -157,24 +147,21 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 {user?.userName?.charAt(0)?.toUpperCase() || 'U'}
               </div>
               <div className="flex-1 min-w-0">
-                <p className={`text-sm font-medium truncate ${
-                  isDark ? 'text-white' : 'text-gray-900'
-                }`}>
+                <p className={`text-sm font-medium truncate ${isDark ? 'text-white' : 'text-gray-900'
+                  }`}>
                   {user?.userName || "User Name"}
                 </p>
-                <p className={`text-xs truncate ${
-                  isDark ? 'text-gray-400' : 'text-gray-500'
-                }`}>
+                <p className={`text-xs truncate ${isDark ? 'text-gray-400' : 'text-gray-500'
+                  }`}>
                   {user?.email || "user@example.com"}
                 </p>
               </div>
               <button
                 onClick={handleLogout}
-                className={`p-2 rounded-lg transition-colors ${
-                  isDark 
-                    ? 'hover:bg-gray-700 text-gray-400' 
-                    : 'hover:bg-gray-100 text-gray-500'
-                }`}
+                className={`p-2 rounded-lg transition-colors ${isDark
+                  ? 'hover:bg-gray-700 text-gray-400'
+                  : 'hover:bg-gray-100 text-gray-500'
+                  }`}
                 title="Logout"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -192,11 +179,10 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               </div>
               <button
                 onClick={handleLogout}
-                className={`p-2 rounded-lg transition-colors ${
-                  isDark 
-                    ? 'hover:bg-gray-700 text-gray-400' 
-                    : 'hover:bg-gray-100 text-gray-500'
-                }`}
+                className={`p-2 rounded-lg transition-colors ${isDark
+                  ? 'hover:bg-gray-700 text-gray-400'
+                  : 'hover:bg-gray-100 text-gray-500'
+                  }`}
                 title="Logout"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -212,43 +198,38 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       <main className="flex-1 flex flex-col overflow-hidden">
         {/* Top Bar - Only show when sidebar is collapsed */}
         {isSidebarCollapsed && (
-          <div className={`h-16 border-b ${
-            isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'
-          } flex items-center justify-between px-6 shadow-sm`}>
+          <div className={`h-16 border-b ${isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'
+            } flex items-center justify-between px-6 shadow-sm`}>
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
                 <ShoppingBag size={20} className="text-white" />
               </div>
-              <h1 className={`text-lg font-bold ${
-                isDark ? 'text-white' : 'text-gray-900'
-              }`}>
+              <h1 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'
+                }`}>
                 SmartOps
               </h1>
             </div>
-            
+
             <div className="flex items-center gap-4">
               <button
                 onClick={toggleTheme}
-                className={`p-2 rounded-lg transition-colors ${
-                  isDark 
-                    ? 'hover:bg-gray-700 text-gray-400' 
-                    : 'hover:bg-gray-100 text-gray-500'
-                }`}
+                className={`p-2 rounded-lg transition-colors ${isDark
+                  ? 'hover:bg-gray-700 text-gray-400'
+                  : 'hover:bg-gray-100 text-gray-500'
+                  }`}
                 title="Toggle Theme"
               >
                 {isDark ? <Sun size={20} /> : <Moon size={20} />}
               </button>
-              
+
               <div className="flex items-center gap-3">
                 <div className="text-right">
-                  <p className={`text-sm font-medium ${
-                    isDark ? 'text-white' : 'text-gray-900'
-                  }`}>
+                  <p className={`text-sm font-medium ${isDark ? 'text-white' : 'text-gray-900'
+                    }`}>
                     {user?.userName || "User Name"}
                   </p>
-                  <p className={`text-xs ${
-                    isDark ? 'text-gray-400' : 'text-gray-500'
-                  }`}>
+                  <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'
+                    }`}>
                     {user?.email || "user@example.com"}
                   </p>
                 </div>
@@ -261,11 +242,11 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         )}
 
         {/* Page Content */}
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-y-auto">
           {children}
         </div>
       </main>
-      
+
       <ToastContainer />
     </div>
   );

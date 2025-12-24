@@ -25,7 +25,6 @@ instance.interceptors.request.use(
 instance.interceptors.response.use(
   (response) => response,
   (error) => {
-    debugger;
     // Handle network errors
     if (!error.response) {
       console.error("Network error:", error.message);

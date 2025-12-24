@@ -113,10 +113,10 @@ export default function SalesPage() {
 
   // Filter and paginate sales
   const filteredSales = sales.filter(sale =>
-    sale.customerName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    sale.customer?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     sale.saleId.toString().includes(searchQuery) ||
     sale.invoiceNo?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    sale.customerId.toString().includes(searchQuery)
+    sale.customerId?.toString().includes(searchQuery)
   );
 
   const totalPages = Math.ceil(filteredSales.length / itemsPerPage);
@@ -226,34 +226,7 @@ export default function SalesPage() {
           </div>
         </div>
 
-        {/* Printer Options */}
-        <div className={`flex items-center gap-4 p-4 rounded-lg mb-6 ${theme.bgCard} ${theme.border}`}>
-          <div className={`text-sm font-medium ${theme.text}`}>Printer Options:</div>
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={directPrint}
-              onChange={(e) => setDirectPrint(e.target.checked)}
-              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            />
-            <span className={`text-sm ${theme.textSecondary}`}>Direct Print</span>
-          </label>
-          <button
-            onClick={async () => {
-              try {
-                const device = await (navigator as any).usb?.requestDevice({ filters: [] });
-                console.log(device);
-                alert('Printer selected (check console)');
-              } catch (e) {
-                alert('Printer selection failed: ' + e);
-              }
-            }}
-            className={`flex items-center gap-2 px-3 py-1 rounded text-sm transition-colors ${theme.buttonSecondary}`}
-          >
-            <Printer size={16} />
-            Select Printer (WebUSB)
-          </button>
-        </div>
+
 
         {/* Search and Add Button */}
         <div className="flex justify-between items-center mb-6">
@@ -341,7 +314,7 @@ export default function SalesPage() {
                     {sale.invoiceNo || 'N/A'}
                   </div>
                   <div className={`col-span-2 text-sm ${theme.text}`}>
-                    {sale.customerName || `Customer #${sale.customerId}`}
+                    {sale.customer?.name || 'Walk-In Customer'}
                   </div>
                   <div className={`col-span-1 text-sm ${theme.textSecondary}`}>
                     {formatDate(sale.saleDate)}

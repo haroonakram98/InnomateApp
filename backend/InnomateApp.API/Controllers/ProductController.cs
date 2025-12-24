@@ -39,8 +39,8 @@ namespace InnomateApp.API.Controllers
         public async Task<IActionResult> Update(int id, [FromBody] UpdateProductDto dto)
         {
             if (id != dto.ProductId) return BadRequest();
-            await _service.UpdateAsync(dto);
-            return Ok(new { Message = "Product updated successfully" });
+            var updatedProduct = await _service.UpdateAsync(dto);
+            return Ok(updatedProduct);
         }
 
         [HttpDelete("{id}")]

@@ -10,7 +10,6 @@ type Props = {
 };
 
 export const CustomerTable: React.FC<Props> = ({ customers, loading, onEdit, onDelete }) => {
-  debugger
   if (loading) {
     return <div className="p-4">Loading...</div>;
   }
