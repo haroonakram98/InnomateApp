@@ -15,8 +15,7 @@ namespace InnomateApp.Application.Interfaces
 
         // Stock Movements
         Task<bool> RecordStockMovementAsync(StockMovementDto movement);
-        Task<FIFOSaleResultDto> ProcessFIFOSaleAsync(int productId, decimal quantity, int saleReferenceId);
-
+        
         // Stock Information
         Task<decimal> GetProductStockBalanceAsync(int productId);
         Task<decimal> GetProductStockValueAsync(int productId);
@@ -27,7 +26,9 @@ namespace InnomateApp.Application.Interfaces
         Task<FIFOSaleResultDto> ProcessSaleWithFIFOAsync(
             int productId,
             decimal quantity,
-            int saleDetailId);
+            int saleDetailId,
+            string reference,
+            string notes);
 
         // ✅ NEW: Validate stock before sale
         Task<StockValidationResult> ValidateStockAvailabilityAsync(
@@ -35,6 +36,8 @@ namespace InnomateApp.Application.Interfaces
 
         // ✅ NEW: Restore stock (for returns/cancellations)
         Task RestoreStockFromSaleDetailAsync(SaleDetail saleDetail);
+
+        Task<FIFOSaleResultDto> ProcessFIFOSaleAsync(int productId, decimal quantity, int saleReferenceId);
 
     }
 }

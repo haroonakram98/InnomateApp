@@ -38,78 +38,66 @@ namespace InnomateApp.Application.Services
 
             try
             {
-                // 1. Fetch Data Sequentially (DbContext is not thread-safe)
-                var totalRevenue = await _saleRepo.GetTotalRevenueAsync();
-                var totalProfit = await _saleRepo.GetTotalProfitAsync();
-                var totalSalesCount = await _saleRepo.GetTotalSalesCountAsync();
-                
-                var dailyStats = await _saleRepo.GetDailyStatsAsync(today);
-                
+                // ✅ OPTIMIZED: Single aggregated query for all sales-related stats
+                var aggregates = await _saleRepo.GetDashboardAggregatesAsync();
+
+                // Fetch remaining counts (Product, Customer, LowStock) - 3 additional queries
                 var productCount = await _productRepo.CountAsync();
                 var lowStockCount = await _productRepo.CountLowStockAsync();
                 var customerCount = await _customerRepo.CountAsync();
 
+                // Update aggregates with product/customer data
+                aggregates.ProductCount = productCount;
+                aggregates.LowStockCount = lowStockCount;
+                aggregates.CustomerCount = customerCount;
+
+                // Fetch recent sales and performance stats (still needed for detailed data)
                 var recentSales = await _saleRepo.GetRecentSalesAsync(5);
                 var performanceStats = await _saleRepo.GetPerformanceStatsAsync(sevenDaysAgo, today);
-                var invoiceStats = await _saleRepo.GetInvoiceStatsAsync();
 
-                // 2. Calculate Trends (Current 7 Days vs Previous 7 Days)
-                var previousSevenDaysStart = sevenDaysAgo.AddDays(-7);
-                var previousSevenDaysEnd = sevenDaysAgo.AddDays(-1);
-
-                var currentPeriodStats = await _saleRepo.GetPeriodStatsAsync(sevenDaysAgo, today);
-                var previousPeriodStats = await _saleRepo.GetPeriodStatsAsync(previousSevenDaysStart, previousSevenDaysEnd);
-
-                // For Customer Growth: New Customers in last 7 days vs Previous 7 days? Or New / TotalBase?
-                // Let's use New vs Previous New for "Trend" if the visual is "Since last week"
-                // But often "Total" cards show increase in total.
-                // If label is "Since last week", it usually implies flow.
-                // Let's use: (CurrentNew - PreviousNew) / PreviousNew ? No, that's volatile.
-                // Let's use: NewCustomersInPeriod / TotalCustomersBeforePeriod * 100 (Growth rate of base)
-                var newCustomersFiles = await _customerRepo.CountAsync(sevenDaysAgo, today);
-                var totalCustomersBefore = customerCount - newCustomersFiles;
+                // Calculate customer growth
+                var newCustomersInPeriod = await _customerRepo.CountAsync(sevenDaysAgo, today);
+                var totalCustomersBefore = customerCount - newCustomersInPeriod;
                 double customerGrowth = totalCustomersBefore > 0 
-                    ? ((double)newCustomersFiles / totalCustomersBefore) * 100 
-                    : (newCustomersFiles > 0 ? 100 : 0);
+                    ? ((double)newCustomersInPeriod / totalCustomersBefore) * 100 
+                    : (newCustomersInPeriod > 0 ? 100 : 0);
 
-                // Revenue Growth (Flow comparison)
-                double revenueGrowth = previousPeriodStats.Revenue > 0 
-                    ? (double)((currentPeriodStats.Revenue - previousPeriodStats.Revenue) / previousPeriodStats.Revenue) * 100
-                    : (currentPeriodStats.Revenue > 0 ? 100 : 0);
+                // Calculate growth percentages from aggregated period data
+                double revenueGrowth = aggregates.PrevPeriodRevenue > 0 
+                    ? (double)((aggregates.CurrentPeriodRevenue - aggregates.PrevPeriodRevenue) / aggregates.PrevPeriodRevenue) * 100
+                    : (aggregates.CurrentPeriodRevenue > 0 ? 100 : 0);
 
-                // Profit Growth
-                double profitGrowth = previousPeriodStats.Profit > 0
-                    ? (double)((currentPeriodStats.Profit - previousPeriodStats.Profit) / previousPeriodStats.Profit) * 100
-                    : (currentPeriodStats.Profit > 0 ? 100 : 0);
+                double profitGrowth = aggregates.PrevPeriodProfit > 0
+                    ? (double)((aggregates.CurrentPeriodProfit - aggregates.PrevPeriodProfit) / aggregates.PrevPeriodProfit) * 100
+                    : (aggregates.CurrentPeriodProfit > 0 ? 100 : 0);
                 
-                // Invoices Growth
-                double invoicesGrowth = previousPeriodStats.Count > 0
-                    ? (double)((currentPeriodStats.Count - previousPeriodStats.Count) / (double)previousPeriodStats.Count) * 100
-                    : (currentPeriodStats.Count > 0 ? 100 : 0);
+                double invoicesGrowth = aggregates.PrevPeriodCount > 0
+                    ? (double)((aggregates.CurrentPeriodCount - aggregates.PrevPeriodCount) / (double)aggregates.PrevPeriodCount) * 100
+                    : (aggregates.CurrentPeriodCount > 0 ? 100 : 0);
 
-                // 3. Construct Response
+                // Construct Response
                 var response = new DashboardResponseDto
                 {
                     Stats = new DashboardStatsDto
                     {
-                        TotalRevenue = totalRevenue,
-                        TotalProfit = totalProfit,
-                        TotalSalesCount = totalSalesCount,
-                        AverageMargin = totalSalesCount > 0 
-                            ? (totalProfit / totalRevenue) * 100 
+                        TotalRevenue = aggregates.TotalRevenue,
+                        TotalProfit = aggregates.TotalProfit,
+                        TotalSalesCount = aggregates.TotalSalesCount,
+                        AverageMargin = aggregates.TotalSalesCount > 0 
+                            ? (aggregates.TotalProfit / aggregates.TotalRevenue) * 100 
                             : 0,
                         
-                        TodayRevenue = dailyStats.Revenue,
-                        TodayProfit = dailyStats.Profit,
-                        TodaySalesCount = dailyStats.Count,
+                        TodayRevenue = aggregates.TodayRevenue,
+                        TodayProfit = aggregates.TodayProfit,
+                        TodaySalesCount = aggregates.TodaySalesCount,
 
-                        TotalProducts = productCount,
-                        LowStockProducts = lowStockCount,
-                        TotalCustomers = customerCount,
+                        TotalProducts = aggregates.ProductCount,
+                        LowStockProducts = aggregates.LowStockCount,
+                        TotalCustomers = aggregates.CustomerCount,
                         
-                        TotalPaidInvoices = invoiceStats.Paid,
-                        TotalUnpaidInvoices = invoiceStats.Unpaid, // This is actually "Pending" based on repo logic
-                        TotalOverdueInvoices = invoiceStats.Overdue,
+                        TotalPaidInvoices = aggregates.PaidInvoices,
+                        TotalUnpaidInvoices = aggregates.PendingInvoices, // "Pending" invoices
+                        TotalOverdueInvoices = aggregates.OverdueInvoices,
 
                         RevenueGrowth = Math.Round(revenueGrowth, 1),
                         ProfitGrowth = Math.Round(profitGrowth, 1),

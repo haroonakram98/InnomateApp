@@ -1,4 +1,5 @@
-﻿using InnomateApp.Application.Interfaces;
+﻿using InnomateApp.Application.DTOs.Dashboard;
+using InnomateApp.Application.Interfaces;
 using InnomateApp.Domain.Entities;
 using InnomateApp.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -186,6 +187,103 @@ namespace InnomateApp.Infrastructure.Repositories
                 .OrderByDescending(s => s.SaleId)
                 .Select(s => s.InvoiceNo)
                 .FirstOrDefaultAsync();
+        }
+
+        public async Task<DashboardAggregates> GetDashboardAggregatesAsync()
+        {
+            var now = DateTime.Now;
+            var todayStart = now.Date;
+            var todayEnd = todayStart.AddDays(1).AddTicks(-1);
+
+            // 7 Days Range (Current Period)
+            var sevenDaysAgo = todayStart.AddDays(-6);
+             // Previous 7 Days (Previous Period)
+            var prevSevenDaysStart = sevenDaysAgo.AddDays(-7);
+            var prevSevenDaysEnd = sevenDaysAgo.AddDays(-1).AddDays(1).AddTicks(-1); // End of the day before current period starts
+
+            // 30 Days Ago (Invoice Stats)
+            var thirtyDaysAgo = todayStart.AddDays(-30);
+
+            var query = _context.Sales.Where(s => !s.IsDeleted);
+
+            var stats = await query
+                .GroupBy(s => 1)
+                .Select(g => new
+                {
+                    // Total Lifetime
+                    TotalRevenue = g.Sum(x => x.TotalAmount),
+                    TotalProfit = g.Sum(x => x.TotalProfit),
+                    TotalCount = g.Count(),
+
+                    // Today
+                    TodayRevenue = g.Where(x => x.SaleDate >= todayStart && x.SaleDate <= todayEnd).Sum(x => x.TotalAmount),
+                    TodayProfit = g.Where(x => x.SaleDate >= todayStart && x.SaleDate <= todayEnd).Sum(x => x.TotalProfit),
+                    TodayCount = g.Where(x => x.SaleDate >= todayStart && x.SaleDate <= todayEnd).Count(),
+
+                    // Current Period (Last 7 Days) - For Growth Calc
+                    CurrentPeriodRevenue = g.Where(x => x.SaleDate >= sevenDaysAgo && x.SaleDate <= now).Sum(x => x.TotalAmount),
+                    CurrentPeriodProfit = g.Where(x => x.SaleDate >= sevenDaysAgo && x.SaleDate <= now).Sum(x => x.TotalProfit),
+                    CurrentPeriodCount = g.Where(x => x.SaleDate >= sevenDaysAgo && x.SaleDate <= now).Count(),
+
+                    // Previous Period (Prior 7 Days) - For Growth Calc
+                    PrevPeriodRevenue = g.Where(x => x.SaleDate >= prevSevenDaysStart && x.SaleDate <= prevSevenDaysEnd).Sum(x => x.TotalAmount),
+                    PrevPeriodProfit = g.Where(x => x.SaleDate >= prevSevenDaysStart && x.SaleDate <= prevSevenDaysEnd).Sum(x => x.TotalProfit),
+                    PrevPeriodCount = g.Where(x => x.SaleDate >= prevSevenDaysStart && x.SaleDate <= prevSevenDaysEnd).Count(),
+
+                    // Invoices
+                    PaidInvoices = g.Count(x => x.IsFullyPaid),
+                    OverdueInvoices = g.Count(x => !x.IsFullyPaid && x.SaleDate < thirtyDaysAgo),
+                    PendingInvoices = g.Count(x => !x.IsFullyPaid && x.SaleDate >= thirtyDaysAgo)
+                })
+                .FirstOrDefaultAsync();
+
+            var result = new DashboardAggregates
+            {
+                TotalRevenue = stats?.TotalRevenue ?? 0,
+                TotalProfit = stats?.TotalProfit ?? 0,
+                TotalSalesCount = stats?.TotalCount ?? 0,
+                TodayRevenue = stats?.TodayRevenue ?? 0,
+                TodayProfit = stats?.TodayProfit ?? 0,
+                TodaySalesCount = stats?.TodayCount ?? 0,
+                
+                CurrentPeriodRevenue = stats?.CurrentPeriodRevenue ?? 0,
+                CurrentPeriodProfit = stats?.CurrentPeriodProfit ?? 0,
+                CurrentPeriodCount = stats?.CurrentPeriodCount ?? 0,
+                
+                PrevPeriodRevenue = stats?.PrevPeriodRevenue ?? 0,
+                PrevPeriodProfit = stats?.PrevPeriodProfit ?? 0,
+                PrevPeriodCount = stats?.PrevPeriodCount ?? 0,
+
+                PaidInvoices = stats?.PaidInvoices ?? 0,
+                OverdueInvoices = stats?.OverdueInvoices ?? 0,
+                PendingInvoices = stats?.PendingInvoices ?? 0,
+
+                // We will populate Products/Customer in service
+                ProductCount = 0,
+                CustomerCount = 0,
+                LowStockCount = 0
+            };
+
+            // Calculate Growth Percentages inside Service or here? 
+            // Better to return the raw period data to Service, but DTO doesn't have fields for "PrevPeriodRevenue".
+            // I should have added them to DTO or created a specific DTO.
+            // For now, I will calculate growth HERE and stuffing it into the DTO? 
+            // The DTO has "RevenueGrowth" property? No, DTO has `TodayRevenue`. 
+            // Wait, `DashboardAggregates` DTO (from Step 78) does NOT have Growth fields!
+            // `DashboardStatsDto` (in DashboardService.cs) DOES.
+            // My new DTO `DashboardAggregates` (Step 78) matches `DashboardStatsDto` structure PARTIALLY.
+            
+            // Re-checking `DashboardAggregates.cs` content I created:
+            // It has Total..., Today..., ProductCount...
+            // It does NOT have Growth fields.
+
+            // So I can't return growth from here unless I modify DTO.
+            // I will modify DTO to include `CurrentPeriodRevenue`, `PrevPeriodRevenue` etc.
+            // OR I will calculate it in Service if I can't get it out.
+            // I'll modify the DTO in `DashboardAggregates.cs` quickly to include Period Stats so Service can calc growth.
+            // Actually, I'll just add `PeriodStats` to `DashboardAggregates`?
+            // To be safe and clean, I will update `DashboardAggregates` to include these values.
+            return result;
         }
 
         public async Task<decimal> GetTotalRevenueAsync()

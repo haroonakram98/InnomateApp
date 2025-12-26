@@ -50,7 +50,6 @@ const SmartOpsDashboard: React.FC = () => {
       const stats = await dashboardService.getStats();
       setData(stats);
       const salesData = await saleService.getAll();
-      debugger
       setSales(salesData);
     } catch (error) {
       console.error(error);

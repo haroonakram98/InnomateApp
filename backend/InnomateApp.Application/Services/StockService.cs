@@ -381,7 +381,9 @@ namespace InnomateApp.Application.Services
         public async Task<FIFOSaleResultDto> ProcessSaleWithFIFOAsync(
             int productId,
             decimal quantity,
-            int saleDetailId)
+            int saleDetailId,
+            string reference,
+            string notes)
         {
             var result = new FIFOSaleResultDto
             {
@@ -439,15 +441,19 @@ namespace InnomateApp.Application.Services
                 }
 
                 // Record stock transaction
+                // Record stock transaction
                 var transaction = new StockTransaction
                 {
                     ProductId = productId,
                     TransactionType = 'S', // Sale
                     ReferenceId = saleDetailId,
+                    TransactionId = saleDetailId, // Keeping for compatibility
                     Quantity = -quantity, // Negative for outgoing
                     UnitCost = totalCost / quantity,
                     TotalCost = totalCost,
-                    CreatedAt = DateTime.Now
+                    CreatedAt = DateTime.Now,
+                    Reference = reference,
+                    Notes = notes
                 };
 
                 await _stockRepository.AddStockTransactionAsync(transaction);

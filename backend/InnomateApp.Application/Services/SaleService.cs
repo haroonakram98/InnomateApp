@@ -14,6 +14,7 @@ namespace InnomateApp.Application.Services
         private readonly IGenericRepository<Payment> _paymentRepo;
         private readonly IPurchaseRepository _purchaseRepo;
         private readonly IStockRepository _stockRepo;
+        private readonly IStockService _stockService;
 
 
         public SaleService(
@@ -21,13 +22,15 @@ namespace InnomateApp.Application.Services
             IGenericRepository<SaleDetail> saleDetailRepo,
             IGenericRepository<Payment> paymentRepo,
             IPurchaseRepository purchaseRepo,
-            IStockRepository stockRepo)
+            IStockRepository stockRepo,
+            IStockService stockService)
         {
             _saleRepo = saleRepo;
             _saleDetailRepo = saleDetailRepo;
             _paymentRepo = paymentRepo;
             _purchaseRepo = purchaseRepo;
             _stockRepo = stockRepo;
+            _stockService = stockService;
         }
 
         public async Task<IEnumerable<SaleResponse>> GetAllAsync()
@@ -162,59 +165,22 @@ namespace InnomateApp.Application.Services
             await _saleRepo.AddAsync(sale);
 
             // --- 2. Now process stock transactions with the SaleId ---
-            foreach (var detail in request.SaleDetails)
+            // Iterate over the SAVED sale details to ensure we have SaleDetailId
+            foreach (var detail in sale.SaleDetails)
             {
-                int productId = detail.ProductId;
-                decimal saleQty = detail.Quantity;
+                var result = await _stockService.ProcessSaleWithFIFOAsync(
+                    detail.ProductId,
+                    detail.Quantity,
+                    detail.SaleDetailId,
+                    $"INV-{sale.InvoiceNo}",
+                    $"Sold via Invoice #{sale.InvoiceNo}");
 
-                // --- 3.1 Validate stock summary ---
-                var stock = await _stockRepo.GetStockSummaryByProductIdAsync(productId);
-                if (stock == null)
-                    throw new Exception($"Stock summary not found for product {productId}");
-
-                if (stock.Balance < saleQty)
-                    throw new Exception($"Insufficient stock for product {productId}. Available: {stock.Balance}, Required: {saleQty}");
-
-                // --- 3.2 FIFO Batch Deduction ---
-                decimal qtyToDeduct = saleQty;
-                var batches = await _stockRepo.GetAvailableBatchesForProductAsync(productId);
-
-                foreach (var batch in batches)
+                if (!result.Success)
                 {
-                    if (qtyToDeduct <= 0) break;
-
-                    decimal deductQty = Math.Min(batch.RemainingQty, qtyToDeduct);
-
-                    // Deduct from batch
-                    batch.RemainingQty -= deductQty;
-                    qtyToDeduct -= deductQty;
-
-                    // Update PurchaseDetail
-                    await _stockRepo.UpdatePurchaseDetailAsync(batch);
-
-                    // Create Stock Transaction with SaleId as ReferenceId
-                    await _stockRepo.AddStockTransactionAsync(new StockTransaction
-                    {
-                        ProductId = productId,
-                        TransactionType = 'O', // 'O' for Out/ Sale
-                        Quantity = -deductQty,
-                        UnitCost = batch.UnitCost,
-                        TotalCost = batch.TotalCost,
-                        CreatedAt = DateTime.Now,
-                        Reference = $"INV-{request.InvoiceNo}",
-                        Notes = $"INV # - {request.InvoiceNo}",
-                        ReferenceId = sale.SaleId, // Add SaleId as ReferenceId
-                    });
+                    // Logic to rollback? 
+                    // ideally we should have a transaction, but for now throwing exception.
+                    throw new Exception($"Stock processing failed for Product {detail.ProductId}: {result.Message}");
                 }
-
-                // If still not enough stock
-                if (qtyToDeduct > 0)
-                    throw new Exception($"FIFO batches insufficient for product {productId}");
-
-                // --- 3.3 Update Stock Summary ---
-                stock.TotalOut += saleQty;
-                stock.Balance -= saleQty;
-                await _stockRepo.UpdateStockSummaryAsync(stock);
             }
 
             // Update the sale with calculated costs (if needed)

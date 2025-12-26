@@ -3,6 +3,8 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
+using InnomateApp.Application.DTOs.Dashboard;
+
 namespace InnomateApp.Application.Interfaces
 {
     public interface ISaleRepository : IGenericRepository<Sale>
@@ -20,7 +22,9 @@ namespace InnomateApp.Application.Interfaces
         Task<string?> GetLastInvoiceNoAsync();
 
         // Dashboard Stats
-        Task<decimal> GetTotalRevenueAsync();
+        Task<DashboardAggregates> GetDashboardAggregatesAsync(); // ✅ Optimized Single Call
+        
+        Task<decimal> GetTotalRevenueAsync(); // Kept for legacy if needed, or remove? I'll keep for now.
         Task<decimal> GetTotalProfitAsync();
         Task<int> GetTotalSalesCountAsync();
         Task<(decimal Revenue, decimal Profit, int Count)> GetDailyStatsAsync(DateTime date);
