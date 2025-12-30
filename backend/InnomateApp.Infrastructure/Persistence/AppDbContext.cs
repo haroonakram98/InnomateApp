@@ -1,14 +1,24 @@
 ﻿using InnomateApp.Domain.Entities;
+using InnomateApp.Domain.Common;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using System.Collections.Generic;
+using InnomateApp.Application.Interfaces;
 
 namespace InnomateApp.Infrastructure.Persistence
 {
     public class AppDbContext : DbContext
     {
-        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+        private readonly ITenantProvider? _tenantProvider;
+
+        public AppDbContext(DbContextOptions<AppDbContext> options, ITenantProvider? tenantProvider = null) 
+            : base(options) 
+        {
+            _tenantProvider = tenantProvider;
+        }
 
         public DbSet<User> Users => Set<User>();
+        public DbSet<Tenant> Tenants => Set<Tenant>();
         public DbSet<Role> Roles => Set<Role>();
         public DbSet<Permission> Permissions => Set<Permission>();
         public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
@@ -28,7 +38,10 @@ namespace InnomateApp.Infrastructure.Persistence
         public DbSet<Tax> Taxes => Set<Tax>();
         public DbSet<Return> Returns => Set<Return>();
         public DbSet<ReturnDetail> ReturnDetails => Set<ReturnDetail>();
-        public DbSet<SaleDetailBatch> SaleDetailBatches { get; set; }
+        public DbSet<SaleDetailBatch> SaleDetailBatches => Set<SaleDetailBatch>();
+
+        public int TenantIdFilter => _tenantProvider?.GetTenantId() ?? 0;
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -275,7 +288,82 @@ namespace InnomateApp.Infrastructure.Persistence
                 .HasForeignKey(rd => rd.ReturnId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            // 🔹 Global Query Filters for Multi-Tenancy
+            modelBuilder.Entity<Product>().HasQueryFilter(p => p.TenantId == this.TenantIdFilter);
+            modelBuilder.Entity<Sale>().HasQueryFilter(s => s.TenantId == this.TenantIdFilter);
+            modelBuilder.Entity<Purchase>().HasQueryFilter(pu => pu.TenantId == this.TenantIdFilter);
+            modelBuilder.Entity<Category>().HasQueryFilter(ca => ca.TenantId == this.TenantIdFilter);
+            modelBuilder.Entity<Supplier>().HasQueryFilter(su => su.TenantId == this.TenantIdFilter);
+            modelBuilder.Entity<Customer>().HasQueryFilter(cu => cu.TenantId == this.TenantIdFilter);
+            modelBuilder.Entity<Return>().HasQueryFilter(re => re.TenantId == this.TenantIdFilter);
+            modelBuilder.Entity<Payment>().HasQueryFilter(pa => pa.TenantId == this.TenantIdFilter);
+            modelBuilder.Entity<StockSummary>().HasQueryFilter(ss => ss.TenantId == this.TenantIdFilter);
+            modelBuilder.Entity<StockTransaction>().HasQueryFilter(st => st.TenantId == this.TenantIdFilter);
+            modelBuilder.Entity<User>().HasQueryFilter(u => u.TenantId == this.TenantIdFilter);
+
+            // Details
+            modelBuilder.Entity<SaleDetail>().HasQueryFilter(sd => sd.TenantId == this.TenantIdFilter);
+            modelBuilder.Entity<PurchaseDetail>().HasQueryFilter(pd => pd.TenantId == this.TenantIdFilter);
+            modelBuilder.Entity<ReturnDetail>().HasQueryFilter(rd => rd.TenantId == this.TenantIdFilter);
+            modelBuilder.Entity<SaleDetailBatch>().HasQueryFilter(sdb => sdb.TenantId == this.TenantIdFilter);
+        }
+
+        public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            var tenantId = _tenantProvider?.GetTenantId() ?? 0;
+            var userId = _tenantProvider?.GetUserId() ?? 0;
+
+            foreach (var entry in ChangeTracker.Entries<TenantEntity>())
+            {
+                switch (entry.State)
+                {
+                    case EntityState.Added:
+                        // Only set TenantId if it's not already set (e.g., set manually during onboarding)
+                        if (tenantId > 0 && entry.Entity.TenantId == 0)
+                        {
+                            entry.Entity.SetTenantId(tenantId);
+                        }
+                        
+                        // Handle audit fields if they exist (Product, Sale, etc. have some)
+                        SetAuditFields(entry, userId, true);
+                        break;
+
+                    case EntityState.Modified:
+                        SetAuditFields(entry, userId, false);
+                        break;
+                }
+            }
+
+            return base.SaveChangesAsync(cancellationToken);
+        }
+
+        private void SetAuditFields(EntityEntry entry, int userId, bool isNew)
+        {
+            // This is a simplified version. Ideally, we'd have a base AuditEntity.
+            // But since our entities have different property names (CreatedAt, UpdatedAt), 
+            // we'll use a pragmatic approach or reflection.
             
+            var now = DateTime.UtcNow;
+
+            // Common patterns in this codebase:
+            var createdAtProp = entry.Metadata.FindProperty("CreatedAt");
+            if (isNew && createdAtProp != null)
+            {
+                entry.Property("CreatedAt").CurrentValue = now;
+            }
+
+            var updatedAtProp = entry.Metadata.FindProperty("UpdatedAt");
+            if (updatedAtProp != null)
+            {
+                entry.Property("UpdatedAt").CurrentValue = now;
+            }
+            
+            // Set user IDs if props exist
+            var createdByProp = entry.Metadata.FindProperty("CreatedBy");
+            if (isNew && createdByProp != null && createdByProp.ClrType == typeof(int) && userId > 0)
+            {
+                entry.Property("CreatedBy").CurrentValue = userId;
+            }
         }
     }
 }

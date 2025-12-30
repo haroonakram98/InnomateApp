@@ -40,13 +40,7 @@ namespace InnomateApp.Infrastructure.Persistence
             // ✅ Seed Admin User
             if (!context.Users.Any())
             {
-                var adminUser = new User
-                {
-                    Username = "admin",
-                    Email = "admin@example.com",
-                    PasswordHash = passwordHasher.HashPassword("Admin@123"), // Set default
-                    CreatedAt = DateTime.Now
-                };
+                var adminUser = User.Create(1, "admin", "admin@example.com", passwordHasher.HashPassword("Admin@123"));
 
                 var adminRole = context.Roles.First(r => r.Name == "Admin");
                 adminUser.Roles = new List<Role> { adminRole };

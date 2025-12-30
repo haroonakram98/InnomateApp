@@ -13,6 +13,7 @@ export interface User {
   id: number;
   userName: string;
   email: string;
+  tenantId: number;
 }
 
 export interface AuthResponse {

@@ -15,6 +15,7 @@ import {
   Home,
   Tag,
   Truck,
+  Building,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "@/store/useAuthStore.js";
@@ -38,9 +39,10 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     { icon: Tag, label: "Categories", path: "/categories" }, // Added Categories
     { icon: Users, label: "Customers", path: "/customers" },
     { icon: Truck, label: "Suppliers", path: "/suppliers" },
-    // { icon: BarChart3, label: "Reports", path: "/reports" },
-    // { icon: Settings, label: "Settings", path: "/settings" },
+    { icon: Building, label: "Tenants", path: "/tenants", superAdminOnly: true },
   ];
+
+  const filteredMenu = menu.filter(item => !item.superAdminOnly || user?.tenantId === 1);
 
   const isActivePath = (path: string) => location.pathname === path;
 
@@ -98,7 +100,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
         {/* Navigation Menu */}
         <nav className="flex-grow flex flex-col py-4 space-y-1 px-3">
-          {menu.map((item, idx) => (
+          {filteredMenu.map((item, idx) => (
             <button
               key={idx}
               onClick={() => navigate(item.path)}

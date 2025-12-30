@@ -1,14 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using InnomateApp.Domain.Common;
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace InnomateApp.Domain.Entities
 {
-    public class PurchaseDetail
+    public class PurchaseDetail : TenantEntity
     {
         [Key]
         public int PurchaseDetailId { get; set; }
@@ -23,18 +18,31 @@ namespace InnomateApp.Domain.Entities
 
         public Purchase Purchase { get; set; } = null!;
         public Product Product { get; set; } = null!;
-        public ICollection<SaleDetail> SaleDetails { get; set; } = new List<SaleDetail>();
+        
+        // Navigation for FIFO
+        public virtual ICollection<SaleDetail> SaleDetails { get; set; } = new List<SaleDetail>();
+
+        public PurchaseDetail() { }
+
         public void CalculateTotal()
         {
             TotalCost = Quantity * UnitCost;
         }
 
-        public void UpdateRemainingQuantity(decimal soldQuantity)
+        public static PurchaseDetail Create(int tenantId, int productId, decimal quantity, decimal unitCost, string? batchNo = null, DateTime? expiryDate = null)
         {
-            if (soldQuantity > RemainingQty)
-                throw new InvalidOperationException("Sold quantity exceeds remaining quantity");
-
-            RemainingQty -= soldQuantity;
+            var detail = new PurchaseDetail
+            {
+                ProductId = productId,
+                Quantity = quantity,
+                RemainingQty = quantity,
+                UnitCost = unitCost,
+                TotalCost = quantity * unitCost,
+                BatchNo = batchNo,
+                ExpiryDate = expiryDate
+            };
+            detail.SetTenantId(tenantId);
+            return detail;
         }
     }
 }

@@ -29,6 +29,13 @@ public class RoleRepository : IRoleRepository
             .FirstOrDefaultAsync(r => r.RoleId == id);
     }
 
+    public async Task<Role?> GetByNameAsync(string name)
+    {
+        return await _context.Roles
+            .Include(r => r.Permissions)
+            .FirstOrDefaultAsync(r => r.Name == name);
+    }
+
     public async Task<Role> AddAsync(Role role)
     {
         _context.Roles.Add(role);

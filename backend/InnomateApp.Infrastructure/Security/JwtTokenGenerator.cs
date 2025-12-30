@@ -29,6 +29,7 @@ namespace InnomateApp.Infrastructure.Security
                 new Claim(JwtRegisteredClaimNames.Sub, user.UserId.ToString()),
                 new Claim(JwtRegisteredClaimNames.UniqueName, user.Username ?? string.Empty),
                 new Claim(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
+                new Claim("tenant_id", user.TenantId.ToString()),
 
                 // Explicit .NET Identity-Compatible Claims
                 new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),

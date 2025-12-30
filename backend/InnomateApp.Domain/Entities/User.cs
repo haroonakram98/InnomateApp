@@ -1,8 +1,9 @@
+using InnomateApp.Domain.Common;
 using System.ComponentModel.DataAnnotations;
 
 namespace InnomateApp.Domain.Entities;
 
-public class User
+public class User : TenantEntity
 {
     [Key]
     public int UserId { get; set; }
@@ -15,6 +16,22 @@ public class User
     public DateTime CreatedAt { get; set; } = DateTime.Now;
 
     // Navigation properties
+    public Tenant? Tenant { get; set; }
     public ICollection<Role> Roles { get; set; } = new List<Role>();
     public DateTime? LastLoginAt { get; set; }
+
+    public User() { }
+
+    public static User Create(int tenantId, string username, string email, string passwordHash)
+    {
+        var user = new User
+        {
+            Username = username,
+            Email = email,
+            PasswordHash = passwordHash,
+            CreatedAt = DateTime.UtcNow
+        };
+        user.SetTenantId(tenantId);
+        return user;
+    }
 }

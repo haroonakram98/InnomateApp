@@ -4,6 +4,7 @@ using InnomateApp.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace InnomateApp.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251229191608_AddMultiTenancyFoundation")]
+    partial class AddMultiTenancyFoundation
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -779,38 +782,6 @@ namespace InnomateApp.Infrastructure.Migrations
                     b.ToTable("Taxes");
                 });
 
-            modelBuilder.Entity("InnomateApp.Domain.Entities.Tenant", b =>
-                {
-                    b.Property<int>("TenantId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("TenantId"));
-
-                    b.Property<string>("Code")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<DateTime?>("SubscriptionExpiry")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("TenantId");
-
-                    b.ToTable("Tenants");
-                });
-
             modelBuilder.Entity("InnomateApp.Domain.Entities.User", b =>
                 {
                     b.Property<int>("UserId")
@@ -843,8 +814,6 @@ namespace InnomateApp.Infrastructure.Migrations
                         .HasColumnType("nvarchar(100)");
 
                     b.HasKey("UserId");
-
-                    b.HasIndex("TenantId");
 
                     b.ToTable("Users");
                 });
@@ -1038,17 +1007,6 @@ namespace InnomateApp.Infrastructure.Migrations
                     b.Navigation("Product");
                 });
 
-            modelBuilder.Entity("InnomateApp.Domain.Entities.User", b =>
-                {
-                    b.HasOne("InnomateApp.Domain.Entities.Tenant", "Tenant")
-                        .WithMany("Users")
-                        .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Tenant");
-                });
-
             modelBuilder.Entity("PermissionRole", b =>
                 {
                     b.HasOne("InnomateApp.Domain.Entities.Permission", null)
@@ -1130,11 +1088,6 @@ namespace InnomateApp.Infrastructure.Migrations
             modelBuilder.Entity("InnomateApp.Domain.Entities.Supplier", b =>
                 {
                     b.Navigation("Purchases");
-                });
-
-            modelBuilder.Entity("InnomateApp.Domain.Entities.Tenant", b =>
-                {
-                    b.Navigation("Users");
                 });
 #pragma warning restore 612, 618
         }

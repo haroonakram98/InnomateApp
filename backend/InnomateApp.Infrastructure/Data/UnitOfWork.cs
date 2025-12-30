@@ -23,6 +23,14 @@ namespace InnomateApp.Infrastructure.Data
             Purchases = new PurchaseRepository(_context);
             Stock = new StockRepository(_context);
             Sales = new SaleRepository(_context);
+            Categories = new CategoryRepository(_context);
+            Customers = new CustomerRepository(_context);
+            Returns = new ReturnRepository(_context);
+            Payments = new PaymentRepository(_context);
+            Users = new UserRepository(_context);
+            Tenants = new TenantRepository(_context);
+            Roles = new RoleRepository(_context);
+            Permissions = new PermissionRepository(_context);
         }
 
         public ISupplierRepository Suppliers { get; }
@@ -30,6 +38,14 @@ namespace InnomateApp.Infrastructure.Data
         public IPurchaseRepository Purchases { get; }
         public IStockRepository Stock { get; }
         public ISaleRepository Sales { get; }
+        public ICategoryRepository Categories { get; }
+        public ICustomerRepository Customers { get; }
+        public IReturnRepository Returns { get; }
+        public IPaymentRepository Payments { get; }
+        public IUserRepository Users { get; }
+        public ITenantRepository Tenants { get; }
+        public IRoleRepository Roles { get; }
+        public IPermissionRepository Permissions { get; }
 
         public async Task<int> SaveChangesAsync()
         {

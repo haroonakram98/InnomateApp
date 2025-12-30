@@ -14,9 +14,17 @@ namespace InnomateApp.Application.Interfaces
         IPurchaseRepository Purchases { get; }
         IStockRepository Stock { get; }
         ISaleRepository Sales { get; }
+        ICategoryRepository Categories { get; }
+        ICustomerRepository Customers { get; }
+        IReturnRepository Returns { get; }
+        IPaymentRepository Payments { get; }
+        IUserRepository Users { get; }
+        ITenantRepository Tenants { get; }
+        IRoleRepository Roles { get; }
+        IPermissionRepository Permissions { get; }
 
         Task<int> SaveChangesAsync();
         Task<int> SaveChangesAsync(CancellationToken cancellationToken);
-        Task<ITransaction> BeginTransactionAsync(); // Use application-specific interface
+        Task<ITransaction> BeginTransactionAsync();
     }
 }

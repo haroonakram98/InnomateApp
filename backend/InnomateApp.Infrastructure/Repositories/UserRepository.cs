@@ -28,12 +28,12 @@ namespace InnomateApp.Infrastructure.Repositories
 
         public async Task<User?> GetUserByUsernameAsync(string username)
         {
-            return await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
+            return await _context.Users.IgnoreQueryFilters().FirstOrDefaultAsync(u => u.Username == username);
         }
 
         public async Task<User?> GetUserByEmailAsync(string email)
         {
-            return await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+            return await _context.Users.IgnoreQueryFilters().FirstOrDefaultAsync(u => u.Email == email);
         }
 
         public async Task<User> CreateUserAsync(User user)
@@ -59,7 +59,7 @@ namespace InnomateApp.Infrastructure.Repositories
 
         public async Task UpdateLastLoginAsync(int userId, DateTime timestamp)
         {
-            var user = await _context.Users.FirstOrDefaultAsync( user => user.UserId == userId);
+            var user = await _context.Users.IgnoreQueryFilters().FirstOrDefaultAsync( user => user.UserId == userId);
             if (user == null) return;
 
             user.LastLoginAt = timestamp;

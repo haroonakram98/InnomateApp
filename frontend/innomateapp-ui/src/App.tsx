@@ -11,6 +11,7 @@ import CategoryPage from "./pages/CategoryPage.js";
 import StockPage from "./pages/StockPage.js";
 import PurchasePage from "./pages/PurchasePage.js";
 import SupplierPage from "./pages/SupplierPage.js";
+import TenantsPage from "./pages/TenantsPage.js";
 function App() {
   const { isAuthenticated, user, checkToken } = useAuthStore();
 
@@ -39,7 +40,7 @@ function App() {
           element={
             isAuthenticated ? <POSPage /> : <Navigate to="/login" replace />
           }
-          />
+        />
 
         {/* Protected Routes */}
         <Route
@@ -49,19 +50,19 @@ function App() {
           }
         />
         <Route
-        path="/suppliers"
-        element={
-          isAuthenticated ? <SupplierPage /> : <Navigate to="/login" replace />
-        }
-      />
-        
+          path="/suppliers"
+          element={
+            isAuthenticated ? <SupplierPage /> : <Navigate to="/login" replace />
+          }
+        />
+
         <Route
           path="/dashboard"
           element={
             isAuthenticated ? <DashboardPage /> : <Navigate to="/login" replace />
           }
         />
-        
+
         <Route
           path="/stocks"
           element={
@@ -88,11 +89,17 @@ function App() {
             isAuthenticated ? <CategoryPage /> : <Navigate to="/login" replace />
           }
         />
-        
+
         <Route
           path="/customers"
           element={
             isAuthenticated ? <CustomerPage /> : <Navigate to="/login" replace />
+          }
+        />
+        <Route
+          path="/tenants"
+          element={
+            isAuthenticated ? <TenantsPage /> : <Navigate to="/login" replace />
           }
         />
       </Routes>

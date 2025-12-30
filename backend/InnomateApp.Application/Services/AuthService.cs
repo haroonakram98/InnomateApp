@@ -46,7 +46,8 @@ namespace InnomateApp.Application.Services
                 {
                     Id = user.UserId.ToString(),   // adjust if Id is int/Guid
                     UserName = user.Username,
-                    Email = user.Email
+                    Email = user.Email,
+                    TenantId = user.TenantId
                 }
             };
         }
@@ -76,7 +77,8 @@ namespace InnomateApp.Application.Services
                 {
                     Id = user.UserId.ToString(),   // adjust if Id is int/Guid
                     UserName = user.Username,
-                    Email = user.Email
+                    Email = user.Email,
+                    TenantId = user.TenantId
                 }
             };
         }
