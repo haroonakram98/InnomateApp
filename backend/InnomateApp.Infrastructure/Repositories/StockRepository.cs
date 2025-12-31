@@ -23,13 +23,11 @@ namespace InnomateApp.Infrastructure.Repositories
         public async Task UpdateStockSummaryAsync(StockSummary stockSummary)
         {
             _context.StockSummaries.Update(stockSummary);
-            await _context.SaveChangesAsync();
         }
 
         public async Task AddStockTransactionAsync(StockTransaction transaction)
         {
             await _context.StockTransactions.AddAsync(transaction);
-            await _context.SaveChangesAsync();
         }
 
         public async Task<IReadOnlyList<StockTransaction>> GetStockTransactionsByProductAsync(int productId)
@@ -93,9 +91,8 @@ namespace InnomateApp.Infrastructure.Repositories
                         $"original Quantity ({purchaseDetail.Quantity}) for PurchaseDetail {purchaseDetail.PurchaseDetailId}");
                 }
 
-                // Mark as modified and save
+                // Mark as modified
                 _context.PurchaseDetails.Update(purchaseDetail);
-                await _context.SaveChangesAsync();
 
                 //_logger.LogDebug(
                 //    "Updated PurchaseDetail {Id}: Product {ProductId}, RemainingQty {Remaining}/{Total}",
@@ -144,7 +141,6 @@ namespace InnomateApp.Infrastructure.Repositories
 
                 // Batch update
                 _context.PurchaseDetails.UpdateRange(detailsList);
-                await _context.SaveChangesAsync();
 
                 //_logger.LogInformation(
                 //    "Batch updated {Count} PurchaseDetails",

@@ -9,33 +9,20 @@ namespace InnomateApp.Application.Services
 {
     public class SaleService : ISaleService
     {
-        private readonly ISaleRepository _saleRepo;
-        private readonly IGenericRepository<SaleDetail> _saleDetailRepo;
-        private readonly IGenericRepository<Payment> _paymentRepo;
-        private readonly IPurchaseRepository _purchaseRepo;
-        private readonly IStockRepository _stockRepo;
+        private readonly IUnitOfWork _uow;
         private readonly IStockService _stockService;
+        private readonly ISequenceService _sequenceService;
 
-
-        public SaleService(
-            ISaleRepository saleRepo,
-            IGenericRepository<SaleDetail> saleDetailRepo,
-            IGenericRepository<Payment> paymentRepo,
-            IPurchaseRepository purchaseRepo,
-            IStockRepository stockRepo,
-            IStockService stockService)
+        public SaleService(IUnitOfWork uow, IStockService stockService, ISequenceService sequenceService)
         {
-            _saleRepo = saleRepo;
-            _saleDetailRepo = saleDetailRepo;
-            _paymentRepo = paymentRepo;
-            _purchaseRepo = purchaseRepo;
-            _stockRepo = stockRepo;
+            _uow = uow;
             _stockService = stockService;
+            _sequenceService = sequenceService;
         }
 
         public async Task<IEnumerable<SaleResponse>> GetAllAsync()
         {
-            var sales = await _saleRepo.GetSalesWithDetailsAsync();
+            var sales = await _uow.Sales.GetSalesWithDetailsAsync();
 
             return sales.Select(s => new SaleResponse
             {
@@ -80,7 +67,7 @@ namespace InnomateApp.Application.Services
 
         public async Task<SaleResponse?> GetByIdAsync(int saleId)
         {
-            var sale = await _saleRepo.GetSaleWithDetailsAsync(saleId);
+            var sale = await _uow.Sales.GetSaleWithDetailsAsync(saleId);
             if (sale == null) return null;
 
             return new SaleResponse
@@ -119,81 +106,83 @@ namespace InnomateApp.Application.Services
 
         public async Task<SaleResponse> CreateAsync(CreateSaleRequest request)
         {
-            var productIds = request.SaleDetails.Select(d => d.ProductId).Distinct().ToList();
-            var productCosts = await _purchaseRepo.GetProductCostsAsync(productIds);
+            await using var transaction = await _uow.BeginTransactionAsync();
 
-            // --- 1. First create the sale to get SaleId ---
-            var sale = new Sale
+            try
             {
-                CustomerId = (request.CustomerId == 0) ? null : request.CustomerId,
-                InvoiceNo = request.InvoiceNo,
-                CreatedBy = request.CreatedBy,
-                CreatedAt = DateTime.Now,
-                SaleDate = DateTime.Now,
-                PaidAmount = request.PaidAmount,
-                BalanceAmount = request.BalanceAmount,
-                IsFullyPaid = request.IsFullyPaid,
-                DiscountType = request.DiscountType,
-                DiscountPercentage = request.DiscountPercentage,
-                Discount = request.Discount,
-                SaleDetails = request.SaleDetails.Select(d => new SaleDetail
+                var productIds = request.SaleDetails.Select(d => d.ProductId).Distinct().ToList();
+                var productCosts = await _uow.Purchases.GetProductCostsAsync(productIds);
+
+                var sale = new Sale
                 {
-                    ProductId = d.ProductId,
-                    Quantity = d.Quantity,
-                    UnitPrice = d.UnitPrice,
-                    Total = d.Quantity * d.UnitPrice,
-                    Discount = d.Discount,
-                    DiscountPercentage = d.DiscountPercentage,
-                    DiscountType = d.DiscountType,
-                    NetAmount = (d.Quantity * d.UnitPrice) - d.Discount
-                }).ToList(),
-                Payments = request.Payments.Select(p => new Payment
+                    CustomerId = (request.CustomerId == 0) ? null : request.CustomerId,
+                    InvoiceNo = request.InvoiceNo,
+                    CreatedBy = request.CreatedBy,
+                    CreatedAt = DateTime.UtcNow,
+                    SaleDate = DateTime.UtcNow,
+                    PaidAmount = request.PaidAmount,
+                    BalanceAmount = request.BalanceAmount,
+                    IsFullyPaid = request.IsFullyPaid,
+                    DiscountType = request.DiscountType,
+                    DiscountPercentage = request.DiscountPercentage,
+                    Discount = request.Discount,
+                    SaleDetails = request.SaleDetails.Select(d => new SaleDetail
+                    {
+                        ProductId = d.ProductId,
+                        Quantity = d.Quantity,
+                        UnitPrice = d.UnitPrice,
+                        Total = d.Quantity * d.UnitPrice,
+                        Discount = d.Discount,
+                        DiscountPercentage = d.DiscountPercentage,
+                        DiscountType = d.DiscountType,
+                        NetAmount = (d.Quantity * d.UnitPrice) - d.Discount
+                    }).ToList(),
+                    Payments = request.Payments.Select(p => new Payment
+                    {
+                        PaymentMethod = p.PaymentMethod,
+                        Amount = p.Amount,
+                        ReferenceNo = p.ReferenceNo,
+                        PaymentDate = DateTime.UtcNow
+                    }).ToList()
+                };
+
+                sale.TotalAmount = sale.SaleDetails.Sum(x => x.Total) - sale.Discount;
+                sale.SubTotal = sale.SaleDetails.Sum(x => x.Total);
+                sale.TotalCost = sale.SaleDetails.Sum(d => d.Quantity * productCosts[d.ProductId]);
+                sale.TotalProfit = sale.TotalAmount - sale.TotalCost;
+                sale.ProfitMargin = sale.TotalAmount > 0 ? (sale.TotalProfit / sale.TotalAmount) * 100 : 0;
+
+                await _uow.Sales.AddAsync(sale);
+                await _uow.SaveChangesAsync(); // Save to get IDs for FIFO
+
+                foreach (var detail in sale.SaleDetails)
                 {
-                    PaymentMethod = p.PaymentMethod,
-                    Amount = p.Amount,
-                    ReferenceNo = p.ReferenceNo,
-                    PaymentDate = DateTime.Now
-                }).ToList()
-            };
+                    var result = await _stockService.ProcessSaleWithFIFOAsync(
+                        detail.ProductId,
+                        detail.Quantity,
+                        detail.SaleDetailId,
+                        $"INV-{sale.InvoiceNo}",
+                        $"Sold via Invoice #{sale.InvoiceNo}");
 
-            sale.TotalAmount = sale.SaleDetails.Sum(x => x.Total) - sale.Discount;
-            sale.SubTotal = sale.SaleDetails.Sum(x => x.Total);
-            sale.TotalCost = sale.SaleDetails.Sum(d => d.Quantity * productCosts[d.ProductId]);
-            sale.TotalProfit = sale.TotalAmount - sale.TotalCost;
-            sale.ProfitMargin = sale.TotalAmount > 0 ? (sale.TotalProfit / sale.TotalAmount) * 100 : 0;
-
-            await _saleRepo.AddAsync(sale);
-
-            // --- 2. Now process stock transactions with the SaleId ---
-            // Iterate over the SAVED sale details to ensure we have SaleDetailId
-            foreach (var detail in sale.SaleDetails)
-            {
-                var result = await _stockService.ProcessSaleWithFIFOAsync(
-                    detail.ProductId,
-                    detail.Quantity,
-                    detail.SaleDetailId,
-                    $"INV-{sale.InvoiceNo}",
-                    $"Sold via Invoice #{sale.InvoiceNo}");
-
-                if (!result.Success)
-                {
-                    // Logic to rollback? 
-                    // ideally we should have a transaction, but for now throwing exception.
-                    throw new Exception($"Stock processing failed for Product {detail.ProductId}: {result.Message}");
+                    if (!result.Success)
+                        throw new InvalidOperationException($"Stock processing failed for Product {detail.ProductId}: {result.Message}");
                 }
+
+                await _uow.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return await GetByIdAsync(sale.SaleId) ?? throw new Exception("Failed to retrieve created sale");
             }
-
-            // Update the sale with calculated costs (if needed)
-            // You might want to update the sale after stock processing if there were any changes
-            await _saleRepo.UpdateAsync(sale); // Optional: if you need to update sale after stock processing
-
-            var created = await _saleRepo.GetSaleWithDetailsAsync(sale.SaleId);
-            return await GetByIdAsync(created!.SaleId) ?? throw new Exception("Creation failed");
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
 
         public async Task<SaleResponse?> UpdateAsync(UpdateSaleRequest request)
         {
-            var sale = await _saleRepo.GetSaleWithDetailsAsync(request.SaleId);
+            var sale = await _uow.Sales.GetSaleWithDetailsAsync(request.SaleId);
             if (sale == null) return null;
 
             sale.InvoiceNo = request.InvoiceNo;
@@ -225,74 +214,72 @@ namespace InnomateApp.Application.Services
 
             sale.TotalAmount = sale.SaleDetails.Sum(x => x.Total);
 
-            await _saleRepo.UpdateAsync(sale);
+            await _uow.Sales.UpdateAsync(sale);
+            await _uow.SaveChangesAsync();
 
             return await GetByIdAsync(sale.SaleId);
         }
 
         public async Task<bool> DeleteAsync(int saleId)
         {
-            var sale = await _saleRepo.GetByIdAsync(saleId);
+            var sale = await _uow.Sales.GetByIdAsync(saleId);
             if (sale == null) return false;
 
-            await _saleRepo.UpdateAsync(sale);
-            await _saleRepo.UpdateAsync(sale);
+            await _uow.Sales.DeleteAsync(sale);
+            await _uow.SaveChangesAsync();
             return true;
         }
 
         public async Task<string> GetNextInvoiceNumberAsync()
         {
-            var lastInvoiceNo = await _saleRepo.GetLastInvoiceNoAsync();
-
-            if (string.IsNullOrEmpty(lastInvoiceNo))
-            {
-                return "INV-1001";
-            }
-
-            // Expected format: INV-XXXX
-            var parts = lastInvoiceNo.Split('-');
-            if (parts.Length == 2 && int.TryParse(parts[1], out int number))
-            {
-                return $"INV-{number + 1}";
-            }
-
-            // Fallback if format is weird
-            return $"INV-{DateTime.Now.Ticks}";
+            return await _sequenceService.GenerateInvoiceNumberAsync();
         }
 
         public async Task<SaleResponse> AddPaymentAsync(AddPaymentRequest request)
         {
-            var sale = await _saleRepo.GetSaleWithDetailsAsync(request.SaleId);
-            if (sale == null) throw new Exception("Sale not found");
+            await using var transaction = await _uow.BeginTransactionAsync();
 
-            if (request.Amount > sale.BalanceAmount)
+            try
             {
-                throw new Exception($"Payment amount ({request.Amount}) exceeds current balance ({sale.BalanceAmount})");
+                var sale = await _uow.Sales.GetSaleWithDetailsAsync(request.SaleId);
+                if (sale == null) throw new KeyNotFoundException("Sale not found");
+
+                if (request.Amount > sale.BalanceAmount)
+                {
+                    throw new InvalidOperationException($"Payment amount ({request.Amount}) exceeds current balance ({sale.BalanceAmount})");
+                }
+
+                var payment = new Payment
+                {
+                    SaleId = request.SaleId,
+                    Amount = request.Amount,
+                    PaymentMethod = request.PaymentMethod,
+                    ReferenceNo = request.ReferenceNo,
+                    PaymentDate = DateTime.UtcNow
+                };
+
+                await _uow.Payments.AddAsync(payment);
+
+                // Update Sale summary
+                sale.PaidAmount += request.Amount;
+                sale.BalanceAmount -= request.Amount;
+                if (sale.BalanceAmount <= 0)
+                {
+                    sale.BalanceAmount = 0;
+                    sale.IsFullyPaid = true;
+                }
+
+                await _uow.Sales.UpdateAsync(sale);
+                await _uow.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return await GetByIdAsync(sale.SaleId) ?? throw new Exception("Failed to retrieve updated sale");
             }
-
-            var payment = new Payment
+            catch
             {
-                SaleId = request.SaleId,
-                Amount = request.Amount,
-                PaymentMethod = request.PaymentMethod,
-                ReferenceNo = request.ReferenceNo,
-                PaymentDate = DateTime.Now
-            };
-
-            await _paymentRepo.AddAsync(payment);
-
-            // Update Sale summary
-            sale.PaidAmount += request.Amount;
-            sale.BalanceAmount -= request.Amount;
-            if (sale.BalanceAmount <= 0)
-            {
-                sale.BalanceAmount = 0;
-                sale.IsFullyPaid = true;
+                await transaction.RollbackAsync();
+                throw;
             }
-
-            await _saleRepo.UpdateAsync(sale);
-
-            return await GetByIdAsync(sale.SaleId) ?? throw new Exception("Failed to retrieve updated sale");
         }
     }
 }

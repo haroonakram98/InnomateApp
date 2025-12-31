@@ -9,187 +9,114 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace InnomateApp.Application.Features.Suppliers.Commands.CreateSale
 {
-    
-
     public class CreateSaleCommandHandler : IRequestHandler<CreateSaleCommand, Result<int>>
     {
         private readonly IUnitOfWork _unitOfWork;
-        private readonly IFifoService _fifoService;
+        private readonly IStockService _stockService;
         private readonly IMapper _mapper;
         private readonly ILogger<CreateSaleCommandHandler> _logger;
 
         public CreateSaleCommandHandler(
             IUnitOfWork unitOfWork,
-            IFifoService fifoService,
+            IStockService stockService,
             IMapper mapper,
             ILogger<CreateSaleCommandHandler> logger)
         {
             _unitOfWork = unitOfWork;
-            _fifoService = fifoService;
+            _stockService = stockService;
             _mapper = mapper;
             _logger = logger;
         }
 
         public async Task<Result<int>> Handle(CreateSaleCommand request, CancellationToken cancellationToken)
         {
+            // Use explicit transaction since we are doing multiple steps
+            await using var transaction = await _unitOfWork.BeginTransactionAsync();
             try
             {
-                // 1. Validate stock availability and calculate FIFO costs
-                var saleCalculation = await CalculateSaleWithFifoAsync(request.SaleDto);
-                if (!saleCalculation.Success)
-                    return Result<int>.Failure(saleCalculation.ErrorMessage!);
+                // 1. Validate stock availability
+                var validationItems = request.SaleDto.SaleDetails
+                    .Select(d => (d.ProductId, d.Quantity))
+                    .ToList();
 
-                // 2. Create sale entity
-                var sale = _mapper.Map<Sale>(request.SaleDto);
-                sale.CreatedAt = DateTime.Now;
-                sale.TotalAmount = saleCalculation.TotalAmount;
-                sale.BalanceAmount = sale.TotalAmount;
-                sale.IsFullyPaid = false;
-                sale.PaidAmount = 0;
-
-                // 3. Create sale details with FIFO allocations
-                foreach (var detailDto in request.SaleDto.SaleDetails)
+                var validationResult = await _stockService.ValidateStockAvailabilityAsync(validationItems);
+                if (!validationResult.IsValid)
                 {
-                    var saleDetail = _mapper.Map<SaleDetail>(detailDto);
-                    saleDetail.Total = detailDto.Quantity * detailDto.UnitPrice;
-
-                    // Allocate stock using FIFO
-                    var allocation = await _fifoService.AllocateStockForSaleAsync(
-                        detailDto.ProductId, detailDto.Quantity);
-
-                    if (allocation.Success && allocation.Allocations.Any())
-                    {
-                        saleDetail.PurchaseDetailId = allocation.Allocations.First().PurchaseDetailId;
-                    }
-                    else
-                    {
-                        return Result<int>.Failure($"Failed to allocate stock for product {detailDto.ProductId}" );
-                    }
-
-                    sale.SaleDetails.Add(saleDetail);
+                    return Result<int>.Failure(string.Join("; ", validationResult.Errors));
                 }
 
-                // 4. Save sale (transaction handled by behavior)
-                var createdSale = await _unitOfWork.Sales.AddAsync(sale);
+                // 2. Create sale entity (Initial Save to get IDs)
+                var sale = _mapper.Map<Sale>(request.SaleDto);
+                sale.CreatedAt = DateTime.UtcNow;
+                sale.SaleDate = DateTime.UtcNow;
+                
+                // Calculate initial totals (Price based)
+                sale.TotalAmount = request.SaleDto.SaleDetails.Sum(d => d.Quantity * d.UnitPrice);
+                sale.BalanceAmount = sale.TotalAmount; // Following original logic
+                sale.IsFullyPaid = false;
+                sale.PaidAmount = 0;
+                
+                // Add details
+                sale.SaleDetails = request.SaleDto.SaleDetails.Select(detailDto => 
+                {
+                    var detail = _mapper.Map<SaleDetail>(detailDto);
+                    detail.Total = detailDto.Quantity * detailDto.UnitPrice;
+                    return detail;
+                }).ToList();
 
-                // 5. Update stock levels
-                await UpdateStockForSaleAsync(createdSale, saleCalculation);
+                // Save to generate SaleId and SaleDetailIds
+                var createdSale = await _unitOfWork.Sales.AddAsync(sale);
+                await _unitOfWork.SaveChangesAsync(); // IDs are generated here
+
+                // 3. Process FIFO for each detail
+                decimal totalCost = 0;
+
+                foreach (var detail in createdSale.SaleDetails)
+                {
+                    var fifoResult = await _stockService.ProcessSaleWithFIFOAsync(
+                        detail.ProductId,
+                        detail.Quantity,
+                        detail.SaleDetailId,
+                        $"INV-{createdSale.InvoiceNo}",
+                        $"Sold via Invoice #{createdSale.InvoiceNo}");
+
+                    if (!fifoResult.Success)
+                    {
+                        throw new InvalidOperationException($"FIFO processing failed for Product {detail.ProductId}: {fifoResult.Message}");
+                    }
+
+                    // Accumulate cost
+                    totalCost += fifoResult.TotalCost;
+                    
+                    // We could update SaleDetail with cost if the entity has a Cost field, 
+                    // but currently we just track valid FIFO execution.
+                }
+
+                // 4. Update Sale with Cost and Profit
+                createdSale.TotalCost = totalCost;
+                createdSale.TotalProfit = createdSale.TotalAmount - totalCost;
+                createdSale.ProfitMargin = createdSale.TotalAmount > 0 
+                    ? (createdSale.TotalProfit / createdSale.TotalAmount) * 100 
+                    : 0;
+
+                await _unitOfWork.Sales.UpdateAsync(createdSale);
+                await _unitOfWork.SaveChangesAsync();
+                
+                await transaction.CommitAsync();
 
                 _logger.LogInformation("Sale created successfully with ID: {SaleId}", createdSale.SaleId);
                 return Result<int>.Success(createdSale.SaleId);
             }
             catch (Exception ex)
             {
+                await transaction.RollbackAsync();
                 _logger.LogError(ex, "Error creating sale");
-                return Result<int>.Failure( "Error creating sale" );
-            }
-        }
-
-        private async Task<SaleCalculationResultDto> CalculateSaleWithFifoAsync(CreateSaleDto saleDto)
-        {
-            var result = new SaleCalculationResultDto();
-            decimal totalAmount = 0;
-            decimal totalCost = 0;
-
-            foreach (var detail in saleDto.SaleDetails)
-            {
-                // Check stock availability
-                var stockSummary = await _unitOfWork.Stock.GetStockSummaryByProductIdAsync(detail.ProductId);
-                if (stockSummary == null || stockSummary.Balance < detail.Quantity)
-                {
-                    return new SaleCalculationResultDto
-                    {
-                        Success = false,
-                        ErrorMessage = $"Insufficient stock for product {detail.ProductId}"
-                    };
-                }
-
-                // Calculate FIFO cost
-                var fifoCost = await _fifoService.CalculateFifoCostAsync(detail.ProductId, detail.Quantity);
-                if (fifoCost == 0)
-                {
-                    return new SaleCalculationResultDto
-                    {
-                        Success = false,
-                        ErrorMessage = $"Error calculating cost for product {detail.ProductId}"
-                    };
-                }
-
-                var detailAmount = detail.Quantity * detail.UnitPrice;
-                totalAmount += detailAmount;
-                totalCost += fifoCost;
-
-                result.DetailCosts.Add(new SaleDetailCostDto
-                {
-                    ProductId = detail.ProductId,
-                    Quantity = detail.Quantity,
-                    UnitPrice = detail.UnitPrice,
-                    UnitCost = fifoCost / detail.Quantity,
-                    TotalCost = fifoCost,
-                    Profit = detailAmount - fifoCost
-                });
-            }
-
-            result.TotalAmount = totalAmount;
-            result.TotalCost = totalCost;
-            result.GrossProfit = totalAmount - totalCost;
-            result.ProfitMargin = totalAmount > 0 ? (result.GrossProfit / totalAmount) * 100 : 0;
-            result.Success = true;
-
-            return result;
-        }
-
-        private async Task UpdateStockForSaleAsync(Sale sale, SaleCalculationResultDto calculation)
-        {
-            foreach (var detail in sale.SaleDetails)
-            {
-                var productCalculation = calculation.DetailCosts
-                    .FirstOrDefault(dc => dc.ProductId == detail.ProductId);
-
-                if (productCalculation == null) continue;
-
-                // Update stock summary
-                var stockSummary = await _unitOfWork.Stock.GetStockSummaryByProductIdAsync(detail.ProductId);
-                if (stockSummary != null)
-                {
-                    stockSummary.TotalOut += detail.Quantity;
-                    stockSummary.Balance -= detail.Quantity;
-                    stockSummary.TotalValue = stockSummary.Balance * stockSummary.AverageCost;
-                    stockSummary.LastUpdated = DateTime.Now;
-
-                    await _unitOfWork.Stock.UpdateStockSummaryAsync(stockSummary);
-                }
-
-                // Update purchase detail remaining quantity (FIFO allocation)
-                if (detail.PurchaseDetailId.HasValue)
-                {
-                    var purchaseDetail = await _unitOfWork.Stock.GetPurchaseDetailForFifoAsync(detail.PurchaseDetailId.Value);
-                    if (purchaseDetail != null)
-                    {
-                        purchaseDetail.RemainingQty -= detail.Quantity;
-                        await _unitOfWork.Purchases.UpdatePurchaseDetailAsync(purchaseDetail);
-                    }
-                }
-
-                // Create stock transaction
-                var stockTransaction = new StockTransaction
-                {
-                    ProductId = detail.ProductId,
-                    TransactionType = 'O',
-                    ReferenceId = sale.SaleId,
-                    Quantity = detail.Quantity,
-                    UnitCost = productCalculation.UnitCost,
-                    TotalCost = productCalculation.TotalCost,
-                    CreatedAt = DateTime.Now
-                };
-                await _unitOfWork.Stock.AddStockTransactionAsync(stockTransaction);
+                return Result<int>.Failure(ex.Message); // Return actual error message for debugging
             }
         }
     }
-
 }

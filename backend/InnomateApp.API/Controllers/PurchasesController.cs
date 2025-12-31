@@ -25,80 +25,52 @@ namespace InnomateApp.API.Controllers
         [HttpPost]
         public async Task<ActionResult<PurchaseResponseDto>> CreatePurchase(CreatePurchaseDto createDto)
         {
-            try
+            var purchase = new Purchase
             {
-                var purchase = new Purchase
+                SupplierId = createDto.SupplierId,
+                PurchaseDate = createDto.PurchaseDate,
+                Notes = createDto.Notes,
+                PurchaseDetails = createDto.PurchaseDetails.Select(detail => new PurchaseDetail
                 {
-                    SupplierId = createDto.SupplierId,
-                    PurchaseDate = createDto.PurchaseDate,
-                    Notes = createDto.Notes,
-                    PurchaseDetails = createDto.PurchaseDetails.Select(detail => new PurchaseDetail
-                    {
-                        ProductId = detail.ProductId,
-                        Quantity = detail.Quantity,
-                        UnitCost = detail.UnitCost,
-                        ExpiryDate = detail.ExpiryDate,
-                        BatchNo = detail.BatchNo
-                    }).ToList()
-                };
+                    ProductId = detail.ProductId,
+                    Quantity = detail.Quantity,
+                    UnitCost = detail.UnitCost,
+                    ExpiryDate = detail.ExpiryDate,
+                    BatchNo = detail.BatchNo
+                }).ToList()
+            };
 
-                var result = await _purchaseService.CreatePurchaseAsync(purchase);
-                var responseDto = MapToResponseDto(result);
+            var result = await _purchaseService.CreatePurchaseAsync(purchase);
+            var responseDto = MapToResponseDto(result);
 
-                return Ok(responseDto);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { error = ex.Message });
-            }
+            return Ok(responseDto);
         }
 
         [HttpPost("{purchaseId}/receive")]
         public async Task<ActionResult<PurchaseResponseDto>> ReceivePurchase(int purchaseId)
         {
-            try
-            {
-                var result = await _purchaseService.ReceivePurchaseAsync(purchaseId);
-                var responseDto = MapToResponseDto(result);
+            var result = await _purchaseService.ReceivePurchaseAsync(purchaseId);
+            var responseDto = MapToResponseDto(result);
 
-                return Ok(responseDto);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { error = ex.Message });
-            }
+            return Ok(responseDto);
         }
 
         [HttpPost("{purchaseId}/cancel")]
         public async Task<ActionResult> CancelPurchase(int purchaseId)
         {
-            try
-            {
-                await _purchaseService.CancelPurchaseAsync(purchaseId);
-                return Ok(new { message = "Purchase cancelled successfully" });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { error = ex.Message });
-            }
+            await _purchaseService.CancelPurchaseAsync(purchaseId);
+            return Ok(new { message = "Purchase cancelled successfully" });
         }
 
         [HttpGet("{purchaseId}")]
         public async Task<ActionResult<PurchaseResponseDto>> GetPurchase(int purchaseId)
         {
-            try
-            {
-                var purchase = await _purchaseService.GetPurchaseByIdAsync(purchaseId);
-                if (purchase == null)
-                    return NotFound();
+            var purchase = await _purchaseService.GetPurchaseByIdAsync(purchaseId);
+            if (purchase == null)
+                return NotFound();
 
-                var responseDto = MapToResponseDto(purchase);
-                return Ok(responseDto);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { error = ex.Message });
-            }
+            var responseDto = MapToResponseDto(purchase);
+            return Ok(responseDto);
         }
 
         [HttpGet]
@@ -106,20 +78,13 @@ namespace InnomateApp.API.Controllers
             [FromQuery] DateTime? startDate = null,
             [FromQuery] DateTime? endDate = null)
         {
-            try
-            {
-                startDate ??= DateTime.Now.AddMonths(-1);
-                endDate ??= DateTime.Now;
+            startDate ??= DateTime.Now.AddMonths(-1);
+            endDate ??= DateTime.Now;
 
-                var purchases = await _purchaseService.GetPurchasesByDateRangeAsync(startDate.Value, endDate.Value);
-                var responseDtos = purchases.Select(MapToResponseDto).ToList();
+            var purchases = await _purchaseService.GetPurchasesByDateRangeAsync(startDate.Value, endDate.Value);
+            var responseDtos = purchases.Select(MapToResponseDto).ToList();
 
-                return Ok(responseDtos);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { error = ex.Message });
-            }
+            return Ok(responseDtos);
         }
 
         private PurchaseResponseDto MapToResponseDto(Purchase purchase)
@@ -153,29 +118,15 @@ namespace InnomateApp.API.Controllers
         [HttpGet("next-purchase-no")]
         public async Task<ActionResult<object>> GetNextPurchaseNumber()
         {
-            try
-            {
-                var nextNo = await _purchaseService.GetNextPurchaseNumberAsync();
-                return Ok(new { purchaseNo = nextNo });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { error = ex.Message });
-            }
+            var nextNo = await _purchaseService.GetNextPurchaseNumberAsync();
+            return Ok(new { purchaseNo = nextNo });
         }
 
         [HttpGet("next-batch-no")]
         public async Task<ActionResult<object>> GetNextBatchNumber()
         {
-            try
-            {
-                var nextNo = await _purchaseService.GetNextBatchNumberAsync();
-                return Ok(new { batchNo = nextNo });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { error = ex.Message });
-            }
+            var nextNo = await _purchaseService.GetNextBatchNumberAsync();
+            return Ok(new { batchNo = nextNo });
         }
     }
 }
