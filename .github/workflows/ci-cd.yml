@@ -1,4 +1,4 @@
-name: Innomate CI
+name: Innomate CI/CD
 
 on:
   push:
@@ -6,29 +6,71 @@ on:
   pull_request:
     branches: [ "main" ]
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME_API: ${{ github.repository }}-api
+  IMAGE_NAME_UI: ${{ github.repository }}-ui
+
 jobs:
-  build-api:
+  build-and-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      
+      # Backend Test Build
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
-      - name: Restore dependencies
-        run: dotnet restore InnomateApp.sln
-      - name: Build API
-        run: dotnet build InnomateApp.sln --no-restore
-
-  build-frontend:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+      - name: Restore and Build API
+        run: |
+          dotnet restore InnomateApp.sln
+          dotnet build InnomateApp.sln --no-restore
+          
+      # Frontend Test Build
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Install dependencies
-        run: cd frontend && npm install
-      - name: Build Frontend
-        run: cd frontend && npm run build
+      - name: Install and Build Frontend
+        run: |
+          cd frontend
+          npm install
+          npm run build
+
+  push-to-registry:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Build & Push API Image
+      - name: Build and push API
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/InnomateApp.API/Dockerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_API }}:latest
+
+      # Build & Push Frontend Image
+      - name: Build and push Frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_UI }}:latest
+          build-args: |
+             VITE_API_URL=http://localhost:8080/api
