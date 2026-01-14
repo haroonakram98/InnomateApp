@@ -28,17 +28,9 @@ namespace InnomateApp.API.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateSaleRequest request)
         {
-            try
-            {
-                if (!ModelState.IsValid) return BadRequest(ModelState);
-                var created = await _saleService.CreateAsync(request);
-                return CreatedAtAction(nameof(GetById), new { id = created.SaleId }, created);
-            }
-            catch(Exception ex)
-            {
-                return BadRequest(new { error = ex.Message });
-            }
-
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+            var created = await _saleService.CreateAsync(request);
+            return CreatedAtAction(nameof(GetById), new { id = created.SaleId }, created);
         }
 
         [HttpPut("{id:int}")]
@@ -66,18 +58,11 @@ namespace InnomateApp.API.Controllers
         [HttpPost("{id:int}/payments")]
         public async Task<IActionResult> AddPayment(int id, [FromBody] AddPaymentRequest request)
         {
-            try
-            {
-                if (id != request.SaleId) return BadRequest("Sale ID mismatch");
-                if (!ModelState.IsValid) return BadRequest(ModelState);
-                
-                var result = await _saleService.AddPaymentAsync(request);
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { error = ex.Message });
-            }
+            if (id != request.SaleId) return BadRequest("Sale ID mismatch");
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+            
+            var result = await _saleService.AddPaymentAsync(request);
+            return Ok(result);
         }
     }
 }

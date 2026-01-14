@@ -55,13 +55,11 @@ namespace InnomateApp.Infrastructure.Repositories
         public async Task AddPurchaseDetailAsync(PurchaseDetail detail)
         {
             await _context.PurchaseDetails.AddAsync(detail);
-            await _context.SaveChangesAsync();
         }
 
         public async Task UpdatePurchaseDetailAsync(PurchaseDetail detail)
         {
             _context.PurchaseDetails.Update(detail);
-            await _context.SaveChangesAsync();
         }
 
         public async Task<IReadOnlyList<Purchase>> GetPurchasesByDateRangeAsync(DateTime startDate, DateTime endDate)

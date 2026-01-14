@@ -1,4 +1,7 @@
 ﻿using AutoMapper;
+using FluentValidation;
+using InnomateApp.Application.Common.Validators;
+using InnomateApp.Application.Common.Behavior;
 using InnomateApp.API.Middleware;
 using InnomateApp.Application.Interfaces;
 using InnomateApp.Application.Interfaces.IServices;
@@ -20,6 +23,7 @@ using Swashbuckle.AspNetCore.SwaggerGen;
 using System.Text;
 using Serilog;
 using Serilog.Context;
+using MediatR;
 
 // ✅ Phase 0: Configure Serilog for structured logging
 Log.Logger = new LoggerConfiguration()
@@ -58,11 +62,13 @@ builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<ICustomerService, CustomerService>();
 builder.Services.AddScoped<ISaleService, SaleService>();
 builder.Services.AddScoped<IStockService, StockService>();
+builder.Services.AddScoped<IFifoService, FifoService>();
 builder.Services.AddScoped<IPurchaseService, PurchaseService>();
 builder.Services.AddScoped<ISupplierService, SupplierService>();
 builder.Services.AddScoped<IReturnService, ReturnService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<ITenantService, TenantService>();
+builder.Services.AddScoped<ISequenceService, SequenceService>();
 // Infrastructure repositories
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 builder.Services.AddScoped<IRoleRepository, RoleRepository>();
@@ -141,6 +147,10 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// FluentValidation
+builder.Services.AddValidatorsFromAssemblyContaining<CreatePurchaseDtoValidator>();
+builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+
 var app = builder.Build();
 
 // ✅ Modern Resilient Seeding
@@ -171,6 +181,7 @@ if (!app.Environment.IsEnvironment("Docker"))
 }
 
 // ✅ Phase 0: Observability Middleware (must be early in pipeline)
+app.UseMiddleware<GlobalExceptionMiddleware>();
 app.UseMiddleware<RequestLoggingMiddleware>();
 app.UseMiddleware<PerformanceMonitoringMiddleware>();
 

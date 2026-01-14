@@ -1,4 +1,5 @@
 ﻿using InnomateApp.Application.Interfaces;
+using InnomateApp.Domain.Common;
 using InnomateApp.Domain.Entities;
 using Microsoft.Extensions.Logging;
 using System;
@@ -6,87 +7,116 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
+using FluentValidation;
+using InnomateApp.Application.DTOs;
+using InnomateApp.Application.Interfaces.Services;
+
 namespace InnomateApp.Application.Services
 {
     public class PurchaseService : IPurchaseService
     {
-        private readonly IPurchaseRepository _purchaseRepository;
-        private readonly IStockTransactionRepository _stockTransactionRepository;
-        private readonly IStockSummaryRepository _stockSummaryRepository;
-        private readonly ISupplierRepository _supplierRepository;
-        private readonly IProductRepository _productRepository;
+        private readonly IUnitOfWork _uow;
         private readonly ILogger<PurchaseService> _logger;
+        private readonly IValidator<CreatePurchaseDto> _validator;
+        private readonly ISequenceService _sequenceService;
 
         public PurchaseService(
-            IPurchaseRepository purchaseRepository,
-            IStockTransactionRepository stockTransactionRepository,
-            IStockSummaryRepository stockSummaryRepository,
-            ISupplierRepository supplierRepository,
-            IProductRepository productRepository,
-            ILogger<PurchaseService> logger)
+            IUnitOfWork uow,
+            ILogger<PurchaseService> logger,
+            IValidator<CreatePurchaseDto> validator,
+            ISequenceService sequenceService)
         {
-            _purchaseRepository = purchaseRepository;
-            _stockTransactionRepository = stockTransactionRepository;
-            _stockSummaryRepository = stockSummaryRepository;
-            _supplierRepository = supplierRepository;
-            _productRepository = productRepository;
+            _uow = uow;
             _logger = logger;
+            _validator = validator;
+            _sequenceService = sequenceService;
         }
 
         public async Task<Purchase> CreatePurchaseAsync(Purchase purchase)
         {
+            await using var transaction = await _uow.BeginTransactionAsync();
             try
             {
-                // Validate supplier exists
-                var supplier = await _supplierRepository.GetByIdAsync(purchase.SupplierId);
+                // 1. Validation (SRP: Using FluentValidation)
+                // We need to map the Domain Entity back to DTO for validation, 
+                // OR ideally, the service should accept the DTO. 
+                // Since the interface accepts Entity, we'll map manually for now to enforce rules.
+                var purchaseDto = new CreatePurchaseDto
+                {
+                    SupplierId = purchase.SupplierId,
+                    PurchaseDate = purchase.PurchaseDate,
+                    InvoiceNo = purchase.InvoiceNo,
+                    CreatedBy = purchase.CreatedBy,
+                    Notes = purchase.Notes,
+                    PurchaseDetails = purchase.PurchaseDetails.Select(d => new CreatePurchaseDetailDto
+                    {
+                        ProductId = d.ProductId,
+                        Quantity = d.Quantity,
+                        UnitCost = d.UnitCost,
+                        BatchNo = d.BatchNo,
+                        ExpiryDate = d.ExpiryDate
+                    }).ToList()
+                };
+
+                var validationResult = await _validator.ValidateAsync(purchaseDto);
+                if (!validationResult.IsValid)
+                {
+                    throw new ValidationException(validationResult.Errors);
+                }
+
+                // 2. Business Logic Validation (Existence checks)
+                var supplier = await _uow.Suppliers.GetByIdAsync(purchase.SupplierId);
                 if (supplier == null)
-                    throw new ArgumentException($"Supplier with ID {purchase.SupplierId} not found");
+                    throw new EntityNotFoundException("Supplier", purchase.SupplierId);
 
                 // Validate products exist
                 foreach (var detail in purchase.PurchaseDetails)
                 {
-                    var product = await _productRepository.GetByIdAsync(detail.ProductId);
+                    var product = await _uow.Products.GetByIdAsync(detail.ProductId);
                     if (product == null)
-                        throw new ArgumentException($"Product with ID {detail.ProductId} not found");
+                        throw new EntityNotFoundException("Product", detail.ProductId);
                 }
 
                 // Generate purchase number and set initial values
                 if (string.IsNullOrWhiteSpace(purchase.InvoiceNo))
                 {
-                    purchase.InvoiceNo = await GeneratePurchaseNumberAsync();
+                    purchase.InvoiceNo = await _sequenceService.GeneratePurchaseNumberAsync();
                 }
-                // Optionally validate: if (purchase.InvoiceNo is not valid format) ... 
+
                 purchase.Status = "Pending";
-                purchase.CreatedAt = DateTime.Now;
+                purchase.CreatedAt = DateTime.UtcNow;
 
                 // Calculate totals
                 purchase.CalculateTotal();
 
                 // Save purchase
-                var createdPurchase = await _purchaseRepository.AddAsync(purchase);
+                var createdPurchase = await _uow.Purchases.AddAsync(purchase);
+                await _uow.SaveChangesAsync();
+                await transaction.CommitAsync();
 
                 _logger.LogInformation("Purchase {InvoiceNo} created successfully with {DetailCount} items",
                     purchase.InvoiceNo, purchase.PurchaseDetails.Count);
 
                 return createdPurchase;
             }
-            catch (Exception ex)
+            catch
             {
-                _logger.LogError(ex, "Error creating purchase for supplier {SupplierId}", purchase.SupplierId);
+                await transaction.RollbackAsync();
                 throw;
             }
         }
 
         public async Task<Purchase> ReceivePurchaseAsync(int purchaseId)
         {
+            await using var transaction = await _uow.BeginTransactionAsync();
             try
             {
-                var purchase = await _purchaseRepository.GetPurchaseWithDetailsAsync(purchaseId);
+                var purchase = await _uow.Purchases.GetPurchaseWithDetailsAsync(purchaseId);
                 if (purchase == null)
-                    throw new ArgumentException($"Purchase with ID {purchaseId} not found");
+                    throw new EntityNotFoundException("Purchase", purchaseId);
 
                 if (purchase.Status != "Pending")
-                    throw new InvalidOperationException($"Cannot receive purchase that is already {purchase.Status}");
+                    throw new BusinessRuleViolationException($"Cannot receive purchase that is already {purchase.Status}");
 
                 // Update purchase status
                 purchase.MarkAsReceived();
@@ -98,7 +128,7 @@ namespace InnomateApp.Application.Services
                     detail.RemainingQty = detail.Quantity;
 
                     // Update purchase detail
-                    await _purchaseRepository.UpdatePurchaseDetailAsync(detail);
+                    await _uow.Purchases.UpdatePurchaseDetailAsync(detail);
 
                     // Create stock transaction
                     var stockTransaction = new StockTransaction
@@ -108,240 +138,148 @@ namespace InnomateApp.Application.Services
                         Quantity = detail.Quantity,
                         UnitCost = detail.UnitCost,
                         TotalCost = detail.TotalCost,
-                        CreatedAt = DateTime.Now,
+                        CreatedAt = DateTime.UtcNow,
                         Reference = $"PUR-{purchase.InvoiceNo}",
                         Notes = $"Purchase receipt - {purchase.InvoiceNo}",
                         ReferenceId = purchase.PurchaseId
                     };
 
-                    await _stockTransactionRepository.AddAsync(stockTransaction);
+                    await _uow.Stock.AddStockTransactionAsync(stockTransaction);
 
                     // Update stock summary
-                    await _stockSummaryRepository.UpdateStockSummaryAsync(
-                        detail.ProductId,
-                        detail.Quantity,
-                        detail.UnitCost);
-
-                    _logger.LogDebug("Updated stock for product {ProductId}, quantity: {Quantity}",
-                        detail.ProductId, detail.Quantity);
+                    await _uow.Stock.UpdateStockSummaryAsync(new StockSummary
+                    {
+                        ProductId = detail.ProductId,
+                        TotalIn = detail.Quantity,
+                        Balance = detail.Quantity,
+                        AverageCost = detail.UnitCost,
+                        TotalValue = detail.TotalCost,
+                        LastUpdated = DateTime.UtcNow
+                    });
                 }
 
                 // Update purchase
-                await _purchaseRepository.UpdateAsync(purchase);
+                await _uow.Purchases.UpdateAsync(purchase);
+                await _uow.SaveChangesAsync();
+                await transaction.CommitAsync();
 
                 _logger.LogInformation("Purchase {PurchaseNumber} received successfully with {DetailCount} items",
                     purchase.InvoiceNo, purchase.PurchaseDetails.Count);
 
                 return purchase;
             }
-            catch (Exception ex)
+            catch
             {
-                _logger.LogError(ex, "Error receiving purchase {PurchaseId}", purchaseId);
+                await transaction.RollbackAsync();
                 throw;
             }
         }
 
         public async Task<bool> CancelPurchaseAsync(int purchaseId)
         {
-            try
-            {
-                var purchase = await _purchaseRepository.GetByIdAsync(purchaseId);
-                if (purchase == null)
-                    throw new ArgumentException($"Purchase with ID {purchaseId} not found");
+            var purchase = await _uow.Purchases.GetByIdAsync(purchaseId);
+            if (purchase == null)
+                throw new EntityNotFoundException("Purchase",purchaseId);
 
-                if (purchase.Status == "Received")
-                    throw new InvalidOperationException("Cannot cancel a received purchase. Consider creating a return instead.");
+            if (purchase.Status == "Received")
+                throw new BusinessRuleViolationException("Cannot cancel a received purchase. Consider creating a return instead.");
 
-                if (purchase.Status == "Cancelled")
-                    throw new InvalidOperationException("Purchase is already cancelled");
+            if (purchase.Status == "Cancelled")
+                throw new BusinessRuleViolationException("Purchase is already cancelled");
 
-                purchase.Status = "Cancelled";
-                await _purchaseRepository.UpdateAsync(purchase);
+            purchase.Status = "Cancelled";
+            await _uow.Purchases.UpdateAsync(purchase);
+            await _uow.SaveChangesAsync();
 
-                _logger.LogInformation("Purchase {PurchaseNumber} cancelled successfully", purchase.InvoiceNo);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error cancelling purchase {PurchaseId}", purchaseId);
-                throw;
-            }
+            _logger.LogInformation("Purchase {PurchaseNumber} cancelled successfully", purchase.InvoiceNo);
+            return true;
         }
 
         public async Task<Purchase> GetPurchaseByIdAsync(int purchaseId)
         {
-            try
-            {
-                var purchase = await _purchaseRepository.GetPurchaseWithDetailsAsync(purchaseId);
-                if (purchase == null)
-                    throw new ArgumentException($"Purchase with ID {purchaseId} not found");
+            var purchase = await _uow.Purchases.GetPurchaseWithDetailsAsync(purchaseId);
+            if (purchase == null)
+                throw new EntityNotFoundException("Purchase",purchaseId);
 
-                return purchase;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting purchase {PurchaseId}", purchaseId);
-                throw;
-            }
+            return purchase;
         }
 
         public async Task<IEnumerable<Purchase>> GetPurchasesByDateRangeAsync(DateTime startDate, DateTime endDate)
         {
-            try
-            {
-                // Ensure end date includes the entire day
-                var endDateInclusive = endDate.Date.AddDays(1).AddSeconds(-1);
+            // Ensure end date includes the entire day
+            var endDateInclusive = endDate.Date.AddDays(1).AddSeconds(-1);
 
-                var purchases = await _purchaseRepository.GetPurchasesByDateRangeAsync(startDate, endDateInclusive);
+            var purchases = await _uow.Purchases.GetPurchasesByDateRangeAsync(startDate, endDateInclusive);
 
-                _logger.LogDebug("Retrieved {Count} purchases between {StartDate} and {EndDate}",
-                    purchases.Count, startDate.ToString("yyyy-MM-dd"), endDate.ToString("yyyy-MM-dd"));
+            _logger.LogDebug("Retrieved {Count} purchases between {StartDate} and {EndDate}",
+                purchases.Count, startDate.ToString("yyyy-MM-dd"), endDate.ToString("yyyy-MM-dd"));
 
-                return purchases;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting purchases by date range {StartDate} to {EndDate}",
-                    startDate.ToString("yyyy-MM-dd"), endDate.ToString("yyyy-MM-dd"));
-                throw;
-            }
+            return purchases;
         }
 
         public async Task<IReadOnlyList<Purchase>> GetPurchasesWithDetailsAsync()
         {
-            try
-            {
-                var purchases = await _purchaseRepository.GetPurchasesWithDetailsAsync();
+            var purchases = await _uow.Purchases.GetPurchasesWithDetailsAsync();
 
-                _logger.LogDebug("Retrieved {Count} purchases with details", purchases.Count);
+            _logger.LogDebug("Retrieved {Count} purchases with details", purchases.Count);
 
-                return purchases;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting all purchases with details");
-                throw;
-            }
+            return purchases;
         }
 
         public async Task<IReadOnlyList<Purchase>> GetPurchasesBySupplierAsync(int supplierId)
         {
-            try
-            {
-                // Validate supplier exists
-                var supplier = await _supplierRepository.GetByIdAsync(supplierId);
-                if (supplier == null)
-                    throw new ArgumentException($"Supplier with ID {supplierId} not found");
+            // Validate supplier exists
+            var supplier = await _uow.Suppliers.GetByIdAsync(supplierId);
+            if (supplier == null)
+                throw new InnomateApp.Domain.Common.EntityNotFoundException("Supplier", supplierId);
 
-                var purchases = await _purchaseRepository.GetPurchasesBySupplierAsync(supplierId);
+            var purchases = await _uow.Purchases.GetPurchasesBySupplierAsync(supplierId);
 
-                _logger.LogDebug("Retrieved {Count} purchases for supplier {SupplierId}",
-                    purchases.Count, supplierId);
+            _logger.LogDebug("Retrieved {Count} purchases for supplier {SupplierId}",
+                purchases.Count, supplierId);
 
-                return purchases;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting purchases for supplier {SupplierId}", supplierId);
-                throw;
-            }
+            return purchases;
         }
 
         // Additional helper methods
         public async Task<IReadOnlyList<Purchase>> GetPendingPurchasesAsync()
         {
-            try
-            {
-                var allPurchases = await _purchaseRepository.GetPurchasesWithDetailsAsync();
-                var pendingPurchases = allPurchases
-                    .Where(p => p.Status == "Pending")
-                    .OrderBy(p => p.PurchaseDate)
-                    .ToList();
+            var allPurchases = await _uow.Purchases.GetPurchasesWithDetailsAsync();
+            var pendingPurchases = allPurchases
+                .Where(p => p.Status == "Pending")
+                .OrderBy(p => p.PurchaseDate)
+                .ToList();
 
-                _logger.LogDebug("Retrieved {Count} pending purchases", pendingPurchases.Count);
+            _logger.LogDebug("Retrieved {Count} pending purchases", pendingPurchases.Count);
 
-                return pendingPurchases;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting pending purchases");
-                throw;
-            }
+            return pendingPurchases;
         }
 
         public async Task<IReadOnlyList<Purchase>> GetRecentPurchasesAsync(int count = 10)
         {
-            try
-            {
-                var allPurchases = await _purchaseRepository.GetPurchasesWithDetailsAsync();
-                var recentPurchases = allPurchases
-                    .OrderByDescending(p => p.PurchaseDate)
-                    .Take(count)
-                    .ToList();
+            var allPurchases = await _uow.Purchases.GetPurchasesWithDetailsAsync();
+            var recentPurchases = allPurchases
+                .OrderByDescending(p => p.PurchaseDate)
+                .Take(count)
+                .ToList();
 
-                return recentPurchases;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting recent purchases");
-                throw;
-            }
+            return recentPurchases;
         }
 
         public async Task<decimal> GetPurchaseTotalByDateRangeAsync(DateTime startDate, DateTime endDate)
         {
-            try
-            {
-                var purchases = await GetPurchasesByDateRangeAsync(startDate, endDate);
-                return purchases.Sum(p => p.TotalAmount);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error calculating purchase total for date range");
-                throw;
-            }
+            var purchases = await GetPurchasesByDateRangeAsync(startDate, endDate);
+            return purchases.Sum(p => p.TotalAmount);
         }
 
         public async Task<string> GetNextPurchaseNumberAsync()
         {
-            return await GeneratePurchaseNumberAsync();
+            return await _sequenceService.GeneratePurchaseNumberAsync();
         }
 
         public async Task<string> GetNextBatchNumberAsync()
         {
-             // Generate a concise unique batch number: BN-{yyyyMMdd}-{HHmmss}-{Random}
-             // Or simpler: BN-{yyyyMMdd}-{Random4Chars} to keep it short but unique enough for UI
-             var today = DateTime.Now.ToString("yyyyMMdd");
-             var random = new Random();
-             var randSuffix = random.Next(1000, 9999);
-             return $"BN-{today}-{randSuffix}";
-        }
-
-        private async Task<string> GeneratePurchaseNumberAsync()
-        {
-            try
-            {
-                var today = DateTime.Now.ToString("yyyyMMdd");
-
-                // Get today's purchases to count
-                var startOfDay = DateTime.Now.Date;
-                var endOfDay = startOfDay.AddDays(1);
-
-                var todaysPurchases = await _purchaseRepository.GetPurchasesByDateRangeAsync(startOfDay, endOfDay);
-                var count = todaysPurchases.Count;
-
-                var purchaseNumber = $"PUR-{today}-{count + 1:0000}";
-
-                _logger.LogDebug("Generated purchase number: {PurchaseNumber}", purchaseNumber);
-
-                return purchaseNumber;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error generating purchase number");
-                // Fallback purchase number
-                return $"PUR-{DateTime.Now:yyyyMMdd-HHmmss}";
-            }
+             return await _sequenceService.GenerateBatchNumberAsync();
         }
     }
 }

@@ -49,13 +49,11 @@ namespace InnomateApp.Infrastructure.Repositories
         public async Task AddSaleDetailAsync(SaleDetail detail)
         {
             await _context.SaleDetails.AddAsync(detail);
-            await _context.SaveChangesAsync();
         }
 
         public async Task UpdateSaleDetailAsync(SaleDetail detail)
         {
             _context.SaleDetails.Update(detail);
-            await _context.SaveChangesAsync();
         }
 
         public async Task<SaleDetail?> GetSaleDetailAsync(int saleDetailId)

@@ -2,6 +2,7 @@
 using AutoMapper;
 using InnomateApp.Application.DTOs;
 using InnomateApp.Application.Interfaces;
+using InnomateApp.Application.Interfaces.Services;
 using InnomateApp.Domain.Entities;
 using Microsoft.Extensions.Logging;
 
@@ -9,34 +10,28 @@ namespace InnomateApp.Application.Services
 {
     public class StockService : IStockService
     {
-        private readonly IStockRepository _stockRepository;
-        private readonly IStockSummaryRepository _stockSummaryRepository;
-        private readonly IProductRepository _productRepository;
-        private readonly ISaleRepository _saleRepository;
+        private readonly IUnitOfWork _uow;
         private readonly IMapper _mapper;
         private readonly ILogger<StockService> _logger;
+        private readonly IFifoService _fifoService;
 
         public StockService(
-            IStockRepository stockRepository,
-            IStockSummaryRepository stockSummaryRepository,
-            IProductRepository productRepository,
-            ISaleRepository saleRepository,
+            IUnitOfWork uow,
             IMapper mapper,
-            ILogger<StockService> logger)
+            ILogger<StockService> logger,
+            IFifoService fifoService)
         {
-            _stockRepository = stockRepository;
-            _stockSummaryRepository = stockSummaryRepository;
-            _productRepository = productRepository;
-            _saleRepository = saleRepository;
+            _uow = uow;
             _mapper = mapper;
             _logger = logger;
+            _fifoService = fifoService;
         }
 
         public async Task<StockSummaryDto?> GetStockSummaryByProductIdAsync(int productId)
         {
             try
             {
-                var stockSummary = await _stockRepository.GetStockSummaryByProductIdAsync(productId);
+                var stockSummary = await _uow.Stock.GetStockSummaryByProductIdAsync(productId);
                 if (stockSummary == null) return null;
 
                 var dto = _mapper.Map<StockSummaryDto>(stockSummary);
@@ -54,7 +49,7 @@ namespace InnomateApp.Application.Services
         {
             try
             {
-                var stockSummaries = await _stockSummaryRepository.GetAllAsync();
+                var stockSummaries = await _uow.Stock.GetAllAsync();
                 return stockSummaries.Select(ss => new StockSummaryDto
                 {
                     StockSummaryId = ss.StockSummaryId,
@@ -79,7 +74,7 @@ namespace InnomateApp.Application.Services
         {
             try
             {
-                var transactions = await _stockRepository.GetStockTransactionsByProductAsync(productId);
+                var transactions = await _uow.Stock.GetStockTransactionsByProductAsync(productId);
                 return transactions.Select(t => new StockTransactionDto
                 {
                     StockTransactionId = t.StockTransactionId,
@@ -105,7 +100,7 @@ namespace InnomateApp.Application.Services
         {
             try
             {
-                var batches = await _stockRepository.GetAvailableBatchesForProductAsync(productId);
+                var batches = await _uow.Stock.GetAvailableBatchesForProductAsync(productId);
                 return batches.Select(b => new FifoBatchDto
                 {
                     PurchaseDetailId = b.PurchaseDetailId,
@@ -138,8 +133,7 @@ namespace InnomateApp.Application.Services
                     TotalCost = movement.Quantity * movement.UnitCost,
                     CreatedAt = movement.TransactionDate
                 };
-
-                await _stockRepository.AddStockTransactionAsync(transaction);
+                await _uow.Stock.AddStockTransactionAsync(transaction);
 
                 // Update stock summary
                 await UpdateStockSummaryAsync(movement.ProductId);
@@ -164,7 +158,7 @@ namespace InnomateApp.Application.Services
             try
             {
                 // Get available batches (FIFO = First In First Out, so order by oldest first)
-                var availableBatches = await _stockRepository.GetAvailableBatchesForProductAsync(productId);
+                var availableBatches = await _uow.Stock.GetAvailableBatchesForProductAsync(productId);
 
                 if (!availableBatches.Any())
                 {
@@ -223,7 +217,7 @@ namespace InnomateApp.Application.Services
                     CreatedAt = DateTime.Now
                 };
 
-                await _stockRepository.AddStockTransactionAsync(saleTransaction);
+                await _uow.Stock.AddStockTransactionAsync(saleTransaction);
 
                 // Update stock summary
                 await UpdateStockSummaryAsync(productId);
@@ -248,7 +242,7 @@ namespace InnomateApp.Application.Services
         {
             try
             {
-                var summary = await _stockRepository.GetStockSummaryByProductIdAsync(productId);
+                var summary = await _uow.Stock.GetStockSummaryByProductIdAsync(productId);
                 return summary?.Balance ?? 0;
             }
             catch (Exception ex)
@@ -262,7 +256,7 @@ namespace InnomateApp.Application.Services
         {
             try
             {
-                var summary = await _stockRepository.GetStockSummaryByProductIdAsync(productId);
+                var summary = await _uow.Stock.GetStockSummaryByProductIdAsync(productId);
                 return summary?.TotalValue ?? 0;
             }
             catch (Exception ex)
@@ -276,8 +270,8 @@ namespace InnomateApp.Application.Services
         {
             try
             {
-                var transactions = await _stockRepository.GetStockTransactionsByProductAsync(productId);
-                var summary = await _stockRepository.GetStockSummaryByProductIdAsync(productId);
+                var transactions = await _uow.Stock.GetStockTransactionsByProductAsync(productId);
+                var summary = await _uow.Stock.GetStockSummaryByProductIdAsync(productId);
 
                 if (summary == null)
                 {
@@ -310,7 +304,7 @@ namespace InnomateApp.Application.Services
                 summary.TotalValue = summary.Balance * summary.AverageCost;
                 summary.LastUpdated = DateTime.Now;
 
-                await _stockRepository.UpdateStockSummaryAsync(summary);
+                await _uow.Stock.UpdateStockSummaryAsync(summary);
                 return true;
             }
             catch (Exception ex)
@@ -328,13 +322,13 @@ namespace InnomateApp.Application.Services
             // Restore stock to the exact batches that were consumed
             foreach (var batchUsage in saleDetail.UsedBatches)
             {
-                var batch = await _stockRepository.GetPurchaseDetailByIdAsync(
+                var batch = await _uow.Stock.GetPurchaseDetailByIdAsync(
                     batchUsage.PurchaseDetailId);
 
                 if (batch != null)
                 {
                     batch.RemainingQty += batchUsage.QuantityUsed;
-                    await _stockRepository.UpdatePurchaseDetailAsync(batch);
+                    await _uow.Stock.UpdatePurchaseDetailAsync(batch);
                 }
             }
 
@@ -350,7 +344,7 @@ namespace InnomateApp.Application.Services
                 CreatedAt = DateTime.Now
             };
 
-            await _stockRepository.AddStockTransactionAsync(transaction);
+            await _uow.Stock.AddStockTransactionAsync(transaction);
             await UpdateStockSummaryAsync(saleDetail.ProductId);
         }
 
@@ -367,7 +361,7 @@ namespace InnomateApp.Application.Services
                 if (balance < quantity)
                 {
                     result.IsValid = false;
-                    var product = await _productRepository.GetByIdAsync(productId);
+                    var product = await _uow.Products.GetByIdAsync(productId);
                     result.Errors.Add(
                         $"Product '{product?.Name ?? productId.ToString()}': " +
                         $"Insufficient stock. Available: {balance}, Requested: {quantity}");
@@ -385,94 +379,16 @@ namespace InnomateApp.Application.Services
             string reference,
             string notes)
         {
-            var result = new FIFOSaleResultDto
+            // Delegate logic to FifoService (OCP / Strategy)
+            var result = await _fifoService.ProcessSaleWithFIFOAsync(productId, quantity, saleDetailId, reference, notes);
+
+            if (result.Success)
             {
-                ProductId = productId,
-                QuantitySold = quantity,
-                LayersUsed = new List<FIFOLayerDto>()
-            };
-
-            try
-            {
-                // Get available batches (FIFO = oldest first)
-                var batches = await _stockRepository.GetAvailableBatchesForProductAsync(productId);
-
-                if (!batches.Any())
-                {
-                    result.Success = false;
-                    result.Message = "No available stock batches";
-                    return result;
-                }
-
-                var totalAvailable = batches.Sum(b => b.RemainingQty);
-                if (totalAvailable < quantity)
-                {
-                    result.Success = false;
-                    result.Message = $"Insufficient stock. Available: {totalAvailable}, Requested: {quantity}";
-                    return result;
-                }
-
-                decimal remainingQty = quantity;
-                decimal totalCost = 0;
-
-                // Process FIFO - consume oldest batches first
-                foreach (var batch in batches.OrderBy(b => b.Purchase!.PurchaseDate))
-                {
-                    if (remainingQty <= 0) break;
-
-                    decimal qtyToUse = Math.Min(batch.RemainingQty, remainingQty);
-                    decimal layerCost = qtyToUse * batch.UnitCost;
-
-                    // Record which batch was used
-                    result.LayersUsed.Add(new FIFOLayerDto
-                    {
-                        PurchaseDetailId = batch.PurchaseDetailId,
-                        QuantityUsed = qtyToUse,
-                        UnitCost = batch.UnitCost,
-                        TotalCost = layerCost
-                    });
-
-                    totalCost += layerCost;
-                    remainingQty -= qtyToUse;
-
-                    // Update batch remaining quantity
-                    batch.RemainingQty -= qtyToUse;
-                    await _stockRepository.UpdatePurchaseDetailAsync(batch);
-                }
-
-                // Record stock transaction
-                // Record stock transaction
-                var transaction = new StockTransaction
-                {
-                    ProductId = productId,
-                    TransactionType = 'S', // Sale
-                    ReferenceId = saleDetailId,
-                    TransactionId = saleDetailId, // Keeping for compatibility
-                    Quantity = -quantity, // Negative for outgoing
-                    UnitCost = totalCost / quantity,
-                    TotalCost = totalCost,
-                    CreatedAt = DateTime.Now,
-                    Reference = reference,
-                    Notes = notes
-                };
-
-                await _stockRepository.AddStockTransactionAsync(transaction);
+                // Update stock summary (Caller responsibility to avoid circular dep)
                 await UpdateStockSummaryAsync(productId);
-
-                result.Success = true;
-                result.TotalCost = totalCost;
-                result.AverageCost = totalCost / quantity;
-                result.Message = "FIFO processing completed successfully";
-
-                return result;
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error processing FIFO for product {ProductId}", productId);
-                result.Success = false;
-                result.Message = $"Error: {ex.Message}";
-                return result;
-            }
+
+            return result;
         }
 
         public async Task RestoreStockFromSaleDetailAsync(int saleDetailId)
@@ -484,7 +400,7 @@ namespace InnomateApp.Application.Services
                     saleDetailId);
 
                 // ✅ Get sale detail with batch information
-                var saleDetail = await _saleRepository.GetSaleDetailWithBatchesAsync(saleDetailId);
+                var saleDetail = await _uow.Sales.GetSaleDetailWithBatchesAsync(saleDetailId);
 
                 if (saleDetail == null)
                 {
@@ -517,7 +433,7 @@ namespace InnomateApp.Application.Services
                 // ✅ Restore stock to the exact batches that were consumed (Reverse FIFO)
                 foreach (var batchUsage in saleDetail.UsedBatches)
                 {
-                    var batch = await _stockRepository.GetPurchaseDetailByIdAsync(
+                    var batch = await _uow.Stock.GetPurchaseDetailByIdAsync(
                         batchUsage.PurchaseDetailId);
 
                     if (batch == null)
@@ -547,7 +463,7 @@ namespace InnomateApp.Application.Services
                         batch.RemainingQty = batch.Quantity;
                     }
 
-                    await _stockRepository.UpdatePurchaseDetailAsync(batch);
+                    await _uow.Stock.UpdatePurchaseDetailAsync(batch);
 
                     _logger.LogDebug(
                         "Restored {Quantity} to batch {BatchId}. " +
@@ -570,7 +486,7 @@ namespace InnomateApp.Application.Services
                     CreatedAt = DateTime.Now
                 };
 
-                await _stockRepository.AddStockTransactionAsync(transaction);
+                await _uow.Stock.AddStockTransactionAsync(transaction);
 
                 // ✅ Update stock summary
                 await UpdateStockSummaryAsync(saleDetail.ProductId);
@@ -611,7 +527,7 @@ namespace InnomateApp.Application.Services
                 CreatedAt = DateTime.Now
             };
 
-            await _stockRepository.AddStockTransactionAsync(transaction);
+            await _uow.Stock.AddStockTransactionAsync(transaction);
             await UpdateStockSummaryAsync(productId);
 
             //_logger.LogWarning(

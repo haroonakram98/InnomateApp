@@ -42,20 +42,19 @@ namespace InnomateApp.Infrastructure.Repositories
         public virtual async Task<T> AddAsync(T entity)
         {
             await _context.Set<T>().AddAsync(entity);
-            await _context.SaveChangesAsync();
             return entity;
         }
 
         public virtual async Task UpdateAsync(T entity)
         {
             _context.Entry(entity).State = EntityState.Modified;
-            await _context.SaveChangesAsync();
+            await Task.CompletedTask;
         }
 
         public virtual async Task DeleteAsync(T entity)
         {
             _context.Set<T>().Remove(entity);
-            await _context.SaveChangesAsync();
+            await Task.CompletedTask;
         }
 
         //public virtual async Task<bool> ExistsAsync(int id)

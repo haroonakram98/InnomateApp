@@ -39,21 +39,21 @@ namespace InnomateApp.Infrastructure.Repositories
         public async Task<User> CreateUserAsync(User user)
         {
             _context.Users.Add(user);
-            await _context.SaveChangesAsync();
+            await Task.CompletedTask;
             return user;
         }
 
         public async Task<User> UpdateUserAsync(User user)
         {
             _context.Users.Update(user);
-            await _context.SaveChangesAsync();
+            await Task.CompletedTask;
             return user;
         }
 
         public async Task<bool> DeleteUserAsync(User user)
         {
             _context.Users.Remove(user);
-            await _context.SaveChangesAsync();
+            await Task.CompletedTask;
             return true;
         }
 
@@ -63,7 +63,7 @@ namespace InnomateApp.Infrastructure.Repositories
             if (user == null) return;
 
             user.LastLoginAt = timestamp;
-            await _context.SaveChangesAsync();
+            await Task.CompletedTask;
         }
     }
 }

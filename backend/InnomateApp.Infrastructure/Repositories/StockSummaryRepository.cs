@@ -28,7 +28,6 @@ namespace InnomateApp.Infrastructure.Repositories
         public async Task DeleteAsync(StockSummary entity)
         {
             _context.StockSummaries.Remove(entity);
-            await _context.SaveChangesAsync();
         }
         public async Task UpdateStockSummaryAsync(int productId, decimal quantity, decimal unitCost)
         {
@@ -62,8 +61,6 @@ namespace InnomateApp.Infrastructure.Repositories
 
                 _context.StockSummaries.Update(stockSummary);
             }
-
-            await _context.SaveChangesAsync();
         }
     }
 }

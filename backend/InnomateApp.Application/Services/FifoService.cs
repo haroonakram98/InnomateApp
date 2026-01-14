@@ -1,110 +1,121 @@
-﻿using InnomateApp.Application.Interfaces;
-using InnomateApp.Domain.Common;
+﻿using InnomateApp.Application.DTOs;
+using InnomateApp.Application.Interfaces;
+using InnomateApp.Application.Interfaces.Services;
+using InnomateApp.Domain.Entities;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace InnomateApp.Application.Services
 {
     public class FifoService : IFifoService
     {
-        private readonly IStockRepository _stockRepository;
+        private readonly IUnitOfWork _uow;
         private readonly ILogger<FifoService> _logger;
 
-        public FifoService(IStockRepository stockRepository, ILogger<FifoService> logger)
+        public FifoService(IUnitOfWork uow, ILogger<FifoService> logger)
         {
-            _stockRepository = stockRepository;
+            _uow = uow;
             _logger = logger;
         }
 
-        public async Task<FifoAllocationResult> AllocateStockForSaleAsync(int productId, decimal quantity)
+        public async Task<FIFOSaleResultDto> ProcessSaleWithFIFOAsync(
+            int productId,
+            decimal quantity,
+            int saleDetailId,
+            string reference,
+            string notes)
         {
-            var result = new FifoAllocationResult();
+            var result = new FIFOSaleResultDto
+            {
+                ProductId = productId,
+                QuantitySold = quantity,
+                LayersUsed = new List<FIFOLayerDto>()
+            };
 
             try
             {
-                // Get available batches in FIFO order
-                var availableBatches = await _stockRepository.GetAvailableBatchesForProductAsync(productId);
+                // Get available batches (FIFO = oldest first)
+                var batches = await _uow.Stock.GetAvailableBatchesForProductAsync(productId);
 
-                if (!availableBatches.Any())
+                if (!batches.Any())
                 {
                     result.Success = false;
-                    result.ErrorMessage = "No stock available for this product";
+                    result.Message = "No available stock batches";
                     return result;
                 }
 
-                decimal remainingQuantity = quantity;
+                var totalAvailable = batches.Sum(b => b.RemainingQty);
+                if (totalAvailable < quantity)
+                {
+                    result.Success = false;
+                    result.Message = $"Insufficient stock. Available: {totalAvailable}, Requested: {quantity}";
+                    return result;
+                }
+
+                decimal remainingQty = quantity;
                 decimal totalCost = 0;
 
-                foreach (var batch in availableBatches)
+                // Process FIFO - consume oldest batches first
+                foreach (var batch in batches.OrderBy(b => b.Purchase!.PurchaseDate))
                 {
-                    if (remainingQuantity <= 0) break;
+                    if (remainingQty <= 0) break;
 
-                    decimal allocatedQuantity = Math.Min(batch.RemainingQty, remainingQuantity);
-                    decimal allocationCost = allocatedQuantity * batch.UnitCost;
+                    decimal qtyToUse = Math.Min(batch.RemainingQty, remainingQty);
+                    decimal layerCost = qtyToUse * batch.UnitCost;
 
-                    result.Allocations.Add(new FifoAllocationDetail
+                    // Record which batch was used
+                    result.LayersUsed.Add(new FIFOLayerDto
                     {
                         PurchaseDetailId = batch.PurchaseDetailId,
-                        Quantity = allocatedQuantity,
+                        QuantityUsed = qtyToUse,
                         UnitCost = batch.UnitCost,
-                        TotalCost = allocationCost
+                        TotalCost = layerCost
                     });
 
-                    totalCost += allocationCost;
-                    remainingQuantity -= allocatedQuantity;
+                    totalCost += layerCost;
+                    remainingQty -= qtyToUse;
+
+                    // Update batch remaining quantity
+                    batch.RemainingQty -= qtyToUse;
+                    await _uow.Stock.UpdatePurchaseDetailAsync(batch);
                 }
 
-                if (remainingQuantity > 0)
+                // Record stock transaction
+                var transaction = new StockTransaction
                 {
-                    result.Success = false;
-                    result.ErrorMessage = $"Insufficient stock. Only {quantity - remainingQuantity} units available";
-                    return result;
-                }
+                    ProductId = productId,
+                    TransactionType = 'S', // Sale
+                    ReferenceId = saleDetailId,
+                    TransactionId = saleDetailId, // Keeping for compatibility
+                    Quantity = -quantity, // Negative for outgoing
+                    UnitCost = totalCost / quantity,
+                    TotalCost = totalCost,
+                    CreatedAt = DateTime.Now,
+                    Reference = reference,
+                    Notes = notes
+                };
+
+                await _uow.Stock.AddStockTransactionAsync(transaction);
+
+                // Note: Updating Stock Summary is the caller's responsibility to avoid circular dependencies
 
                 result.Success = true;
                 result.TotalCost = totalCost;
+                result.AverageCost = totalCost / quantity;
+                result.Message = "FIFO processing completed successfully";
+
                 return result;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error allocating stock for product {ProductId}", productId);
+                _logger.LogError(ex, "Error processing FIFO for product {ProductId}", productId);
                 result.Success = false;
-                result.ErrorMessage = "An error occurred during stock allocation";
+                result.Message = $"Error: {ex.Message}";
                 return result;
             }
-        }
-
-        public async Task<decimal> ReturnStockFromSaleAsync(int saleDetailId, decimal quantity)
-        {
-            // Implementation logic handled by StockService for now, but keeping this for interface compliance
-            // or future direct FIFO reversal if needed.
-            // For now, we can throw NotSupportedException or return 0 if it's not strictly used yet,
-            // or implement basic logic if required.
-            // Based on previous plan, StockService handles this.
-            // To satisfy interface, we return 0. (Or we can remove from Interface if unused, but user wants to fix errors).
-            return await Task.FromResult(0m);
-        }
-
-        public async Task<decimal> CalculateFifoCostAsync(int productId, decimal quantity)
-        {
-             // Simplified calculation without allocation side effects
-             var batches = await _stockRepository.GetAvailableBatchesForProductAsync(productId);
-             decimal totalCost = 0;
-             decimal remaining = quantity;
-
-             foreach (var batch in batches)
-             {
-                 if (remaining <= 0) break;
-                 decimal take = Math.Min(batch.RemainingQty, remaining);
-                 totalCost += take * batch.UnitCost;
-                 remaining -= take;
-             }
-             
-             return totalCost;
         }
     }
 }
