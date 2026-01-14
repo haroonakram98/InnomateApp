@@ -25,4 +25,10 @@
     <ProjectReference Include="..\InnomateApp.Domain\InnomateApp.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="appsettings.Docker.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

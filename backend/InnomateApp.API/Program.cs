@@ -83,6 +83,7 @@ builder.Services.AddScoped<IReturnRepository, ReturnRepository>();
 builder.Services.AddScoped<ITenantRepository, TenantRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<ITenantProvider, TenantProvider>();
+builder.Services.AddScoped<IDatabaseInitializer, DatabaseInitializer>();
 builder.Services.AddHttpContextAccessor();
 
 
@@ -142,21 +143,32 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Seed database
-using (var scope = app.Services.CreateScope())
+// ✅ Modern Resilient Seeding
+try
 {
-    SeedData.Seed(scope.ServiceProvider);
+    using (var scope = app.Services.CreateScope())
+    {
+        var initializer = scope.ServiceProvider.GetRequiredService<IDatabaseInitializer>();
+        await initializer.InitializeAsync();
+    }
+}
+catch (Exception ex)
+{
+    Log.Error(ex, "🔴 CRITICAL: Database is unavailable. Application will start but DB-dependent features will fail.");
 }
 
 // Pipeline
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Docker"))
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
 app.UseCors("AllowFrontend");
-app.UseHttpsRedirection();
+if (!app.Environment.IsEnvironment("Docker"))
+{
+    app.UseHttpsRedirection();
+}
 
 // ✅ Phase 0: Observability Middleware (must be early in pipeline)
 app.UseMiddleware<RequestLoggingMiddleware>();
