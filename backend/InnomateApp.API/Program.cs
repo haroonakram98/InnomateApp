@@ -32,10 +32,51 @@ builder.Host.UseSerilog();
 // Add Application Services (MediatR, AutoMapper, FluentValidation, Application Services)
 builder.Services.AddApplicationServices();
 
+<<<<<<< HEAD
 // Add Infrastructure Services (Repositories, UnitOfWork, Security, Logging, Transaction Behavior)
 builder.Services.AddInfrastructureServices(builder.Configuration);
 
 // HTTP Context Accessor
+=======
+// DI Services
+// Application layer services
+builder.Services.AddScoped<IRoleService, RoleService>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<ICategoryService, CategoryService>();
+builder.Services.AddScoped<ICustomerService, CustomerService>();
+builder.Services.AddScoped<ISaleService, SaleService>();
+builder.Services.AddScoped<IStockService, StockService>();
+builder.Services.AddScoped<IFifoService, FifoService>();
+builder.Services.AddScoped<IPurchaseService, PurchaseService>();
+builder.Services.AddScoped<ISupplierService, SupplierService>();
+builder.Services.AddScoped<IReturnService, ReturnService>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
+builder.Services.AddScoped<ITenantService, TenantService>();
+builder.Services.AddScoped<ISequenceService, SequenceService>();
+// Infrastructure repositories
+builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
+builder.Services.AddScoped<IRoleRepository, RoleRepository>();
+builder.Services.AddScoped<IPermissionRepository, PermissionRepository>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IProductRepository, ProductRepository>();
+builder.Services.AddScoped<ICategoryRepository,CategoryRepository>();
+builder.Services.AddScoped<IStockSummaryRepository, StockSummaryRepository>();
+builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
+builder.Services.AddScoped<ISaleRepository, SaleRepository>();
+builder.Services.AddScoped<ISaleDetailRepository, SaleDetailRepository>();
+builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
+builder.Services.AddScoped<IStockRepository, StockRepository>();
+builder.Services.AddScoped<IPurchaseRepository, PurchaseRepository>();
+builder.Services.AddScoped<IStockTransactionRepository, StockTransactionRepository>();
+builder.Services.AddScoped<ISupplierRepository, SupplierRepository>();
+builder.Services.AddScoped<IReturnRepository, ReturnRepository>();
+builder.Services.AddScoped<ITenantRepository, TenantRepository>();
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddScoped<ITenantProvider, TenantProvider>();
+builder.Services.AddScoped<IDatabaseInitializer, DatabaseInitializer>();
+>>>>>>> dc59a0166b34a93b059fb6b3ff5e4c3f5958d352
 builder.Services.AddHttpContextAccessor();
 
 // JWT Configuration
@@ -79,17 +120,38 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 
+<<<<<<< HEAD
     var app = builder.Build();
+=======
+var app = builder.Build();
+
+// ✅ Modern Resilient Seeding
+try
+{
+    using (var scope = app.Services.CreateScope())
+    {
+        var initializer = scope.ServiceProvider.GetRequiredService<IDatabaseInitializer>();
+        await initializer.InitializeAsync();
+    }
+}
+catch (Exception ex)
+{
+    Log.Error(ex, "🔴 CRITICAL: Database is unavailable. Application will start but DB-dependent features will fail.");
+}
+>>>>>>> dc59a0166b34a93b059fb6b3ff5e4c3f5958d352
 
 // Pipeline
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Docker"))
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
 app.UseCors("AllowFrontend");
-app.UseHttpsRedirection();
+if (!app.Environment.IsEnvironment("Docker"))
+{
+    app.UseHttpsRedirection();
+}
 
 // ✅ Phase 0: Observability Middleware (must be early in pipeline)
 app.UseMiddleware<GlobalExceptionMiddleware>();

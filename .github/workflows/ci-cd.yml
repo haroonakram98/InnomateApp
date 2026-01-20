@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 name: CI/CD Pipeline
 
 on:
@@ -151,3 +152,39 @@ jobs:
             'Jwt__Issuer'='InnomateApp' \
             'Jwt__Audience'='InnomateAppUsers' \
             'ASPNETCORE_ENVIRONMENT'='Production'
+=======
+name: Innomate CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Restore dependencies
+        run: dotnet restore backend/InnomateApp.sln
+      - name: Build API
+        run: dotnet build backend/InnomateApp.sln --no-restore
+
+  build-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: cd frontend && npm install
+      - name: Build Frontend
+        run: cd frontend && npm run build
+>>>>>>> dc59a0166b34a93b059fb6b3ff5e4c3f5958d352
