@@ -43,7 +43,7 @@ export interface SupplierDetailDto extends SupplierDTO {
   totalPurchaseAmount: number;
   pendingPurchases: number;
   lastPurchaseDate?: string;
-  recentPurchases: PurchaseSummaryDto[];
+  recentPurchases?: PurchaseSummaryDto[];
 }
 
 export interface PurchaseSummaryDto {
@@ -61,4 +61,10 @@ export interface SupplierStats {
   lastPurchaseDate?: string;
   averagePurchaseAmount: number;
   completedPurchases: number;
+}
+
+export interface SupplierLookupDTO {
+  supplierId: number;
+  name: string;
+  contactPerson?: string;
 }

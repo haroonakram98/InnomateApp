@@ -1,4 +1,5 @@
-﻿using InnomateApp.Application.Interfaces;
+﻿using InnomateApp.Application.DTOs.Products.Responses;
+using InnomateApp.Application.Interfaces;
 using InnomateApp.Domain.Entities;
 using InnomateApp.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -18,12 +19,36 @@ namespace InnomateApp.Infrastructure.Repositories
                 .SingleOrDefaultAsync();
         }
 
-        public async Task<IReadOnlyList<Product>> GetProductsWithCategoryAsync()
+        public async Task<IReadOnlyList<Product>> GetActiveProductsWithCategoryAsync()
         {
             return await _context.Products
                 .Include(p => p.Category)
                 .Include(p => p.StockSummary)
                 .Where(p => p.IsActive)
+                .AsNoTracking()
+                .ToListAsync();
+        }
+
+        public async Task<IReadOnlyList<Product>> GetAllProductsWithCategoryAsync()
+        {
+            return await _context.Products
+                .Include(p => p.Category)
+                .Include(p => p.StockSummary)
+                .AsNoTracking()
+                .ToListAsync();
+        }
+
+        public async Task<IReadOnlyList<ProductLookupResponse>> GetLookupAsync()
+        {
+            return await _context.Products
+                .Where(p => p.IsActive)
+                .Select(p => new ProductLookupResponse
+                {
+                    ProductId = p.ProductId,
+                    Name = p.Name,
+                    SKU = p.SKU,
+                    DefaultSalePrice = p.DefaultSalePrice
+                })
                 .AsNoTracking()
                 .ToListAsync();
         }

@@ -30,14 +30,12 @@ namespace InnomateApp.Application.Services
             if (!isValid) return null;
 
             // Update last login WITHOUT blocking the login flow
-            //await _userRepository.UpdateLastLoginAsync(user.Id, DateTime.UtcNow);
+            //await _userRepository.UpdateLastLoginAsync(user.Id, DateTime.Now);
 
             //  Non - blocking login timestamp update
             _ = _loginUpdateQueue.EnqueueAsync(user.UserId);
 
             var token = _jwtTokenGenerator.GenerateToken(user);
-
-            
 
             return new AuthResponseDto
             {

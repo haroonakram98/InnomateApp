@@ -7,7 +7,7 @@ namespace InnomateApp.Application.Interfaces.Services
     {
         Task<IEnumerable<SaleResponse>> GetAllAsync();
         Task<SaleResponse?> GetByIdAsync(int saleId);
-        Task<SaleResponse> CreateAsync(CreateSaleRequest request);
+
         Task<SaleResponse?> UpdateAsync(UpdateSaleRequest request);
         Task<bool> DeleteAsync(int saleId);
         Task<string> GetNextInvoiceNumberAsync();

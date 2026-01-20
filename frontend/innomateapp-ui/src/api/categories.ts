@@ -13,6 +13,11 @@ export const categoryApi = {
     return data;
   },
 
+  getLookup: async (): Promise<{ categoryId: number; name: string }[]> => {
+    const { data } = await axios.get<{ categoryId: number; name: string }[]>("/categories/lookup");
+    return data;
+  },
+
   create: async (payload: CreateCategoryDTO): Promise<CategoryDTO> => {
     const { data } = await axios.post<CategoryDTO>("/categories", payload);
     return data;

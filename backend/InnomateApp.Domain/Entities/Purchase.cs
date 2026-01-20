@@ -46,8 +46,8 @@ namespace InnomateApp.Domain.Entities
                 InvoiceNo = invoiceNo,
                 CreatedBy = createdBy,
                 Notes = notes ?? string.Empty,
-                PurchaseDate = DateTime.UtcNow,
-                CreatedAt = DateTime.UtcNow,
+                PurchaseDate = DateTime.Now,
+                CreatedAt = DateTime.Now,
                 Status = "Pending"
             };
 
@@ -86,7 +86,7 @@ namespace InnomateApp.Domain.Entities
                 throw new BusinessRuleViolationException("Purchase is already received");
 
             Status = "Received";
-            ReceivedDate = DateTime.UtcNow;
+            ReceivedDate = DateTime.Now;
             
             _domainEvents.Add(new PurchaseReceivedEvent(PurchaseId, TotalAmount));
         }

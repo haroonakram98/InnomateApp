@@ -1,4 +1,5 @@
-﻿using InnomateApp.Application.Interfaces;
+﻿using InnomateApp.Application.Common;
+using InnomateApp.Application.Interfaces;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using System;
@@ -52,11 +53,7 @@ namespace InnomateApp.Infrastructure.Behaviors
 
         private static bool IsQuery(TRequest request)
         {
-            return request.GetType().Name.EndsWith("Query");
+            return request.GetType().Name.EndsWith("Query") || request is IBaseQuery;
         }
-        
     }
-    // Marker interface for queries
-    public interface IBaseQuery { }
-
 }

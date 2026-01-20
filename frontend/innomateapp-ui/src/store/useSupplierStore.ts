@@ -1,21 +1,22 @@
-// src/store/useSupplierStore.ts
 import { create } from "zustand";
-import { SupplierDTO, CreateSupplierDTO, UpdateSupplierDTO, SupplierDetailDto, SupplierStats } from "@/types/supplier.js";
+import { SupplierDTO, CreateSupplierDTO, UpdateSupplierDTO, SupplierDetailDto, SupplierStats, SupplierLookupDTO } from "@/types/supplier.js";
 import { supplierService } from "@/api/supplierService.js";
 import { useToastStore } from "@/store/useToastStore.js";
 
 interface SupplierState {
   // State
   suppliers: SupplierDTO[];
+  lookup: SupplierLookupDTO[];
   selectedSupplier: SupplierDTO | null;
   supplierDetail: SupplierDetailDto | null;
   supplierStats: SupplierStats | null;
   isLoading: boolean;
   error: string | null;
-  
+
   // Actions
   actions: {
     fetchSuppliers: (search?: string) => Promise<void>;
+    fetchLookup: () => Promise<void>;
     fetchSupplierById: (id: number) => Promise<void>;
     fetchSupplierDetail: (id: number) => Promise<void>;
     fetchSupplierStats: (id: number) => Promise<void>;
@@ -31,6 +32,7 @@ interface SupplierState {
 export const useSupplierStore = create<SupplierState>((set, get) => ({
   // Initial state
   suppliers: [],
+  lookup: [],
   selectedSupplier: null,
   supplierDetail: null,
   supplierStats: null,
@@ -49,6 +51,15 @@ export const useSupplierStore = create<SupplierState>((set, get) => ({
         const message = error instanceof Error ? error.message : "Failed to fetch suppliers";
         set({ error: message, isLoading: false });
         toast(message, 'error');
+      }
+    },
+
+    fetchLookup: async () => {
+      try {
+        const lookup = await supplierService.getLookup();
+        set({ lookup });
+      } catch (error) {
+        console.error("Failed to fetch supplier lookup", error);
       }
     },
 
@@ -96,8 +107,8 @@ export const useSupplierStore = create<SupplierState>((set, get) => ({
       set({ error: null });
       try {
         const newSupplier = await supplierService.createSupplier(payload);
-        set((state) => ({ 
-          suppliers: [...state.suppliers, newSupplier] 
+        set((state) => ({
+          suppliers: [...state.suppliers, newSupplier]
         }));
         toast("Supplier created successfully", 'success');
       } catch (error) {
@@ -118,8 +129,8 @@ export const useSupplierStore = create<SupplierState>((set, get) => ({
             supplier.supplierId === id ? updatedSupplier : supplier
           ),
           selectedSupplier: state.selectedSupplier?.supplierId === id ? updatedSupplier : state.selectedSupplier,
-          supplierDetail: state.supplierDetail?.supplierId === id 
-            ? { ...state.supplierDetail, ...updatedSupplier } 
+          supplierDetail: state.supplierDetail?.supplierId === id
+            ? { ...state.supplierDetail, ...updatedSupplier }
             : state.supplierDetail,
         }));
         toast("Supplier updated successfully", 'success');
@@ -159,11 +170,11 @@ export const useSupplierStore = create<SupplierState>((set, get) => ({
           suppliers: state.suppliers.map((supplier) =>
             supplier.supplierId === id ? { ...supplier, isActive: result.isActive } : supplier
           ),
-          selectedSupplier: state.selectedSupplier?.supplierId === id 
-            ? { ...state.selectedSupplier, isActive: result.isActive } 
+          selectedSupplier: state.selectedSupplier?.supplierId === id
+            ? { ...state.selectedSupplier, isActive: result.isActive }
             : state.selectedSupplier,
-          supplierDetail: state.supplierDetail?.supplierId === id 
-            ? { ...state.supplierDetail, isActive: result.isActive } 
+          supplierDetail: state.supplierDetail?.supplierId === id
+            ? { ...state.supplierDetail, isActive: result.isActive }
             : state.supplierDetail,
         }));
         toast(`Supplier ${result.isActive ? 'activated' : 'deactivated'} successfully`, 'success');
@@ -187,6 +198,7 @@ export const useSupplierStore = create<SupplierState>((set, get) => ({
 
 // Selector hooks for optimal performance
 export const useSuppliers = () => useSupplierStore((state) => state.suppliers);
+export const useSupplierLookup = () => useSupplierStore((state) => state.lookup);
 export const useSuppliersLoading = () => useSupplierStore((state) => state.isLoading);
 export const useSuppliersError = () => useSupplierStore((state) => state.error);
 export const useSelectedSupplier = () => useSupplierStore((state) => state.selectedSupplier);

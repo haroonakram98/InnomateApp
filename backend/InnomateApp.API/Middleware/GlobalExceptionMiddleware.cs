@@ -64,6 +64,16 @@ namespace InnomateApp.API.Middleware
                     problemDetails.Detail = exception.Message;
                     break;
 
+                case FluentValidation.ValidationException validationException:
+                    response.StatusCode = (int)HttpStatusCode.BadRequest;
+                    problemDetails.Status = (int)HttpStatusCode.BadRequest;
+                    problemDetails.Title = "Validation Failed";
+                    problemDetails.Detail = "One or more validation errors occurred.";
+                    problemDetails.Extensions["errors"] = validationException.Errors
+                        .Select(e => new { e.PropertyName, e.ErrorMessage })
+                        .ToList();
+                    break;
+
                 default:
                     response.StatusCode = (int)HttpStatusCode.InternalServerError;
                     problemDetails.Status = (int)HttpStatusCode.InternalServerError;

@@ -1,6 +1,6 @@
 // stores/useProductStore.ts
 import { create } from "zustand";
-import { ProductDTO, CreateProductDto, UpdateProductDto, ProductStockDto } from "@/types/product.js";
+import { ProductDTO, CreateProductDto, UpdateProductDto, ProductStockDto, ProductLookupDTO } from "@/types/product.js";
 import { productService } from "@/services/productService.js";
 import { useToastStore } from "@/store/useToastStore.js";
 import { SupplierDTO } from "@/types/supplier.js";
@@ -9,6 +9,7 @@ interface ProductState {
   // State
   products: ProductDTO[];
   salesProducts: ProductStockDto[];
+  lookup: ProductLookupDTO[];
   selectedProduct: ProductDTO | null;
   isLoading: boolean;
   error: string | null;
@@ -22,6 +23,7 @@ interface ProductState {
     selectProduct: (product: ProductDTO | null) => void;
     clearError: () => void;
     fetchProductsForSales: () => Promise<void>;
+    fetchLookup: () => Promise<void>;
   };
 }
 
@@ -29,6 +31,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
   // Initial state
   products: [],
   salesProducts: [],
+  lookup: [],
   selectedProduct: null,
   isLoading: false,
   error: null,
@@ -121,12 +124,21 @@ export const useProductStore = create<ProductState>((set, get) => ({
         toast(message, 'error');
       }
     },
+    fetchLookup: async () => {
+      try {
+        const lookup = await productService.getLookup();
+        set({ lookup });
+      } catch (error) {
+        console.error("Failed to fetch product lookup", error);
+      }
+    }
   },
 }));
 
 // Selector hooks for optimal performance
 export const useProducts = () => useProductStore((state) => state.products);
 export const useSalesProducts = () => useProductStore((state) => state.salesProducts);
+export const useProductLookup = () => useProductStore((state) => state.lookup);
 export const useProductsLoading = () => useProductStore((state) => state.isLoading);
 export const useProductsError = () => useProductStore((state) => state.error);
 export const useSelectedProduct = () => useProductStore((state) => state.selectedProduct);

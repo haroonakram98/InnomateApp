@@ -7,13 +7,15 @@ import { useToastStore } from "@/store/useToastStore.js";
 interface CategoryState {
   // State
   categories: CategoryDTO[];
+  lookup: { categoryId: number; name: string }[];
   selectedCategory: CategoryDTO | null;
   isLoading: boolean;
   error: string | null;
-  
+
   // Actions grouped together
   actions: {
     fetchCategories: () => Promise<void>;
+    fetchLookup: () => Promise<void>;
     createCategory: (payload: CreateCategoryDTO) => Promise<void>;
     updateCategory: (id: number, payload: UpdateCategoryDTO) => Promise<void>;
     deleteCategory: (id: number) => Promise<void>;
@@ -25,6 +27,7 @@ interface CategoryState {
 export const useCategoryStore = create<CategoryState>((set, get) => ({
   // Initial state
   categories: [],
+  lookup: [],
   selectedCategory: null,
   isLoading: false,
   error: null,
@@ -44,13 +47,24 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
       }
     },
 
+    fetchLookup: async () => {
+      // Don't set global loading state for lookup to avoid full page spinners if used in dropdowns
+      try {
+        const { categoryApi } = await import("@/api/categories.js");
+        const lookup = await categoryApi.getLookup();
+        set({ lookup });
+      } catch (error) {
+        console.error("Failed to fetch category lookup", error);
+      }
+    },
+
     createCategory: async (payload: CreateCategoryDTO) => {
       const toast = useToastStore.getState().push;
       set({ error: null });
       try {
         const newCategory = await categoryService.createCategory(payload);
-        set((state) => ({ 
-          categories: [...state.categories, newCategory] 
+        set((state) => ({
+          categories: [...state.categories, newCategory]
         }));
         toast("Category created successfully", 'success');
       } catch (error) {
@@ -112,5 +126,6 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
 export const useCategories = () => useCategoryStore((state) => state.categories);
 export const useCategoriesLoading = () => useCategoryStore((state) => state.isLoading);
 export const useCategoriesError = () => useCategoryStore((state) => state.error);
+export const useCategoryLookup = () => useCategoryStore((state) => state.lookup);
 export const useSelectedCategory = () => useCategoryStore((state) => state.selectedCategory);
 export const useCategoryActions = () => useCategoryStore((state) => state.actions);

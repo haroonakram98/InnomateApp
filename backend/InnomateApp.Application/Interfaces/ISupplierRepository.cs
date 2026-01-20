@@ -1,4 +1,5 @@
 ﻿// Application/Interfaces/IRepositories/ISupplierRepository.cs
+using InnomateApp.Application.DTOs.Suppliers.Responses;
 using InnomateApp.Domain.Entities;
 using System;
 using System.Collections.Generic;
@@ -22,5 +23,10 @@ namespace InnomateApp.Application.Interfaces
         // Additional methods for enhanced functionality
         Task<IReadOnlyList<Supplier>> GetSuppliersWithRecentPurchasesAsync(DateTime fromDate);
         Task<IReadOnlyList<Supplier>> GetTopSuppliersByPurchaseAmountAsync(int count);
+        
+        /// <summary>
+        /// Gets lightweight supplier list for dropdowns (ID, Name, ContactPerson)
+        /// </summary>
+        Task<IReadOnlyList<SupplierLookupResponse>> GetLookupAsync();
     }
 }

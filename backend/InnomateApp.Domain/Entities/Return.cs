@@ -37,8 +37,8 @@ namespace InnomateApp.Domain.Entities
                 SaleId = saleId,
                 CreatedBy = createdBy,
                 Reason = reason,
-                ReturnDate = DateTime.UtcNow,
-                CreatedAt = DateTime.UtcNow
+                ReturnDate = DateTime.Now,
+                CreatedAt = DateTime.Now
             };
 
             returnEntity.SetTenantId(tenantId);

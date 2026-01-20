@@ -64,10 +64,8 @@ export const useAuthStore = create<AuthState>()(
         try {
           const decoded = jwtDecode<DecodedToken>(token);
           const now = Date.now() / 1000; // current time in seconds
-          console.log(decoded.exp)
-          console.log(now)
+          
           if (decoded.exp && decoded.exp < now) {
-            console.warn("JWT expired → logging out");
             set({
               user: null,
               token: null,
@@ -75,7 +73,6 @@ export const useAuthStore = create<AuthState>()(
             });
           }
         } catch (err) {
-          console.error("Invalid token → logging out", err);
           set({
             user: null,
             token: null,

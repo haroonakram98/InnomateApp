@@ -19,8 +19,8 @@ namespace InnomateApp.Application.Services
 
         public async Task<string> GeneratePurchaseNumberAsync()
         {
-            var today = DateTime.UtcNow.ToString("yyyyMMdd");
-            var startOfDay = DateTime.UtcNow.Date;
+            var today = DateTime.Now.ToString("yyyyMMdd");
+            var startOfDay = DateTime.Now.Date;
             var endOfDay = startOfDay.AddDays(1);
 
             var todaysPurchases = await _uow.Purchases.GetPurchasesByDateRangeAsync(startOfDay, endOfDay);

@@ -1,11 +1,12 @@
 // src/services/supplierService.ts
 import api from "@/lib/utils/axios.js"
-import { 
-  SupplierDTO, 
-  CreateSupplierDTO, 
-  UpdateSupplierDTO, 
+import {
+  SupplierDTO,
+  CreateSupplierDTO,
+  UpdateSupplierDTO,
   SupplierWithStatsDTO,
-  SupplierDetailDto 
+  SupplierDetailDto,
+  SupplierLookupDTO
 } from '@/types/supplier.js';
 
 export const supplierService = {
@@ -23,6 +24,13 @@ export const supplierService = {
     return response.data;
   },
 
+  // Get supplier lookup (lightweight)
+  getLookup: async (): Promise<SupplierLookupDTO[]> => {
+    const response = await api.get('/suppliers/lookup');
+    return response.data;
+  },
+
+  /*
   // Get top suppliers
   getTopSuppliers: async (count: number = 10): Promise<SupplierDTO[]> => {
     const response = await api.get('/suppliers/top', {
@@ -38,6 +46,7 @@ export const supplierService = {
     });
     return response.data;
   },
+  */
 
   // Get supplier by ID
   getSupplierById: async (id: number): Promise<SupplierDTO> => {

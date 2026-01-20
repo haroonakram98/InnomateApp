@@ -104,81 +104,7 @@ namespace InnomateApp.Application.Services
             };
         }
 
-        public async Task<SaleResponse> CreateAsync(CreateSaleRequest request)
-        {
-            await using var transaction = await _uow.BeginTransactionAsync();
 
-            try
-            {
-                var productIds = request.SaleDetails.Select(d => d.ProductId).Distinct().ToList();
-                var productCosts = await _uow.Purchases.GetProductCostsAsync(productIds);
-
-                var sale = new Sale
-                {
-                    CustomerId = (request.CustomerId == 0) ? null : request.CustomerId,
-                    InvoiceNo = request.InvoiceNo,
-                    CreatedBy = request.CreatedBy,
-                    CreatedAt = DateTime.UtcNow,
-                    SaleDate = DateTime.UtcNow,
-                    PaidAmount = request.PaidAmount,
-                    BalanceAmount = request.BalanceAmount,
-                    IsFullyPaid = request.IsFullyPaid,
-                    DiscountType = request.DiscountType,
-                    DiscountPercentage = request.DiscountPercentage,
-                    Discount = request.Discount,
-                    SaleDetails = request.SaleDetails.Select(d => new SaleDetail
-                    {
-                        ProductId = d.ProductId,
-                        Quantity = d.Quantity,
-                        UnitPrice = d.UnitPrice,
-                        Total = d.Quantity * d.UnitPrice,
-                        Discount = d.Discount,
-                        DiscountPercentage = d.DiscountPercentage,
-                        DiscountType = d.DiscountType,
-                        NetAmount = (d.Quantity * d.UnitPrice) - d.Discount
-                    }).ToList(),
-                    Payments = request.Payments.Select(p => new Payment
-                    {
-                        PaymentMethod = p.PaymentMethod,
-                        Amount = p.Amount,
-                        ReferenceNo = p.ReferenceNo,
-                        PaymentDate = DateTime.UtcNow
-                    }).ToList()
-                };
-
-                sale.TotalAmount = sale.SaleDetails.Sum(x => x.Total) - sale.Discount;
-                sale.SubTotal = sale.SaleDetails.Sum(x => x.Total);
-                sale.TotalCost = sale.SaleDetails.Sum(d => d.Quantity * productCosts[d.ProductId]);
-                sale.TotalProfit = sale.TotalAmount - sale.TotalCost;
-                sale.ProfitMargin = sale.TotalAmount > 0 ? (sale.TotalProfit / sale.TotalAmount) * 100 : 0;
-
-                await _uow.Sales.AddAsync(sale);
-                await _uow.SaveChangesAsync(); // Save to get IDs for FIFO
-
-                foreach (var detail in sale.SaleDetails)
-                {
-                    var result = await _stockService.ProcessSaleWithFIFOAsync(
-                        detail.ProductId,
-                        detail.Quantity,
-                        detail.SaleDetailId,
-                        $"INV-{sale.InvoiceNo}",
-                        $"Sold via Invoice #{sale.InvoiceNo}");
-
-                    if (!result.Success)
-                        throw new InvalidOperationException($"Stock processing failed for Product {detail.ProductId}: {result.Message}");
-                }
-
-                await _uow.SaveChangesAsync();
-                await transaction.CommitAsync();
-
-                return await GetByIdAsync(sale.SaleId) ?? throw new Exception("Failed to retrieve created sale");
-            }
-            catch
-            {
-                await transaction.RollbackAsync();
-                throw;
-            }
-        }
 
         public async Task<SaleResponse?> UpdateAsync(UpdateSaleRequest request)
         {
@@ -255,7 +181,7 @@ namespace InnomateApp.Application.Services
                     Amount = request.Amount,
                     PaymentMethod = request.PaymentMethod,
                     ReferenceNo = request.ReferenceNo,
-                    PaymentDate = DateTime.UtcNow
+                    PaymentDate = DateTime.Now
                 };
 
                 await _uow.Payments.AddAsync(payment);

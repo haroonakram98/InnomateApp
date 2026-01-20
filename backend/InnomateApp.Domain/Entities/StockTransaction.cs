@@ -34,7 +34,7 @@ namespace InnomateApp.Domain.Entities
                 TotalCost = qty * cost,
                 Reference = reference,
                 Notes = notes ?? string.Empty,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.Now
             };
 
             transaction.SetTenantId(tenantId);

@@ -20,13 +20,7 @@ namespace InnomateApp.Application.Mappings
             CreateMap<UpdateCustomerDto, Customer>();
 
             // Product mappings
-            // Supplier mappings
-            CreateMap<Supplier, SupplierDto>().ReverseMap();
-            CreateMap<CreateSupplierDto, Supplier>();
-            CreateMap<UpdateSupplierDto, Supplier>();
-            CreateMap<Supplier, SupplierWithStatsDto>();
-            CreateMap<Supplier, SupplierDetailDto>();
-
+            // Supplier mappings - Handled manually by MediatR Handlers
             CreateMap<Purchase, PurchaseSummaryDto>();
 
             // Product mappings

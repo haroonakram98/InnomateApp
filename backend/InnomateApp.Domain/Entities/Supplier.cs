@@ -45,7 +45,7 @@ namespace InnomateApp.Domain.Entities
                 Email = email?.Trim(),
                 Phone = phone?.Trim(),
                 Address = address?.Trim(),
-                CreatedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.Now,
                 IsActive = true
             };
 
@@ -61,25 +61,25 @@ namespace InnomateApp.Domain.Entities
             Address = address;
             ContactPerson = contactPerson;
             Notes = notes;
-            UpdatedAt = DateTime.UtcNow;
+            UpdatedAt = DateTime.Now;
         }
 
         public void Deactivate()
         {
             IsActive = false;
-            UpdatedAt = DateTime.UtcNow;
+            UpdatedAt = DateTime.Now;
         }
 
         public void Activate()
         {
             IsActive = true;
-            UpdatedAt = DateTime.UtcNow;
+            UpdatedAt = DateTime.Now;
         }
 
         public void ToggleStatus()
         {
             IsActive = !IsActive;
-            UpdatedAt = DateTime.UtcNow;
+            UpdatedAt = DateTime.Now;
         }
 
         public bool IsValid()

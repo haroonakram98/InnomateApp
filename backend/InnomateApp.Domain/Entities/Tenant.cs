@@ -18,7 +18,7 @@ namespace InnomateApp.Domain.Entities
 
         public bool IsActive { get; set; } = true;
         
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
         public DateTime? SubscriptionExpiry { get; set; }
 
         // Navigation
@@ -31,7 +31,7 @@ namespace InnomateApp.Domain.Entities
                 Name = name,
                 Code = code.ToUpperInvariant(),
                 IsActive = true,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.Now
             };
         }
     }

@@ -10,7 +10,7 @@ namespace InnomateApp.Domain.Entities
         public decimal QuantityUsed { get; set; }
         public decimal UnitCost { get; set; }
         public decimal TotalCost { get; set; }
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
 
         public SaleDetail SaleDetail { get; set; } = null!;
         public PurchaseDetail PurchaseDetail { get; set; } = null!;
@@ -26,7 +26,7 @@ namespace InnomateApp.Domain.Entities
                 QuantityUsed = quantityUsed,
                 UnitCost = unitCost,
                 TotalCost = quantityUsed * unitCost,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.Now
             };
             batch.SetTenantId(tenantId);
             return batch;

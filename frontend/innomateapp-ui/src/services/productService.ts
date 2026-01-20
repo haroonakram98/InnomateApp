@@ -7,8 +7,12 @@ class ProductService {
     return await productApi.getAll();
   }
 
-  async fetchProductsForSale(): Promise<ProductStockDto[]>{
+  async fetchProductsForSale(): Promise<ProductStockDto[]> {
     return await productApi.getAllForSales();
+  }
+
+  async getLookup(): Promise<import("@/types/product.js").ProductLookupDTO[]> {
+    return await productApi.getLookup();
   }
 
   async createProduct(payload: CreateProductDto): Promise<ProductDTO> {

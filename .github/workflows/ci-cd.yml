@@ -1,0 +1,153 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # Backend Tests and Build
+  backend-tests:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+        
+    - name: Restore dependencies
+      run: dotnet restore backend/InnomateApp.sln
+      
+    - name: Build
+      run: dotnet build backend/InnomateApp.sln --no-restore --configuration Release
+      
+    - name: Run tests
+      run: dotnet test backend/InnomateApp.sln --no-build --configuration Release --verbosity normal
+
+  # Frontend Tests and Build
+  frontend-tests:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: frontend/innomateapp-ui/package-lock.json
+        
+    - name: Install dependencies
+      working-directory: ./frontend/innomateapp-ui
+      run: npm ci
+      
+    - name: Run linting
+      working-directory: ./frontend/innomateapp-ui
+      run: npm run lint
+      
+    - name: Build
+      working-directory: ./frontend/innomateapp-ui
+      run: npm run build
+
+  # Docker Build and Push
+  docker-build:
+    needs: [backend-tests, frontend-tests]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    permissions:
+      contents: read
+      packages: write
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Extract metadata
+      id: meta-backend
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-backend
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          
+    - name: Build and push backend image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        push: true
+        tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-backend:latest
+        labels: ${{ steps.meta-backend.outputs.labels }}
+        
+    - name: Extract metadata for frontend
+      id: meta-frontend
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          
+    - name: Build and push frontend image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./frontend/innomateapp-ui
+        push: true
+        tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend:latest
+        labels: ${{ steps.meta-frontend.outputs.labels }}
+
+  # Deploy to Azure (Free Tier)
+  deploy-azure:
+    needs: docker-build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Azure CLI
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+        
+    - name: Deploy to Azure Container Instances
+      run: |
+        # Create resource group if it doesn't exist
+        az group create --name innomate-rg --location eastus
+        
+        # Deploy container group
+        az container create \
+          --resource-group innomate-rg \
+          --name innomate-app \
+          --image ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-backend:latest \
+          --dns-name-label innomate-app-$(date +%s) \
+          --ports 80 \
+          --environment-variables \
+            'ConnectionStrings__DefaultConnection'='${{ secrets.AZURE_DB_CONNECTION_STRING }}' \
+            'Jwt__Key'='${{ secrets.JWT_SECRET_KEY }}' \
+            'Jwt__Issuer'='InnomateApp' \
+            'Jwt__Audience'='InnomateAppUsers' \
+            'ASPNETCORE_ENVIRONMENT'='Production'

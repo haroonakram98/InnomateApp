@@ -1,0 +1,109 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "containerAppName": {
+      "type": "string",
+      "defaultValue": "innomate-app",
+      "metadata": {
+        "description": "Name of the container app"
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Location for all resources"
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.App/containerApps",
+      "apiVersion": "2023-05-01",
+      "name": "[parameters('containerAppName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', 'innomate-env')]",
+        "configuration": {
+          "ingress": {
+            "external": true,
+            "targetPort": 80,
+            "allowInsecure": false
+          },
+          "secrets": [
+            {
+              "name": "db-connection-string",
+              "value": "[parameters('dbConnectionString')]"
+            },
+            {
+              "name": "jwt-secret",
+              "value": "[parameters('jwtSecret')]"
+            }
+          ]
+        },
+        "template": {
+          "containers": [
+            {
+              "image": "ghcr.io/yourusername/innomateapp-backend:latest",
+              "name": "innomate-backend",
+              "resources": {
+                "cpu": json('0.25'),
+                "memory": "0.5Gi"
+              },
+              "env": [
+                {
+                  "name": "ConnectionStrings__DefaultConnection",
+                  "secretRef": "db-connection-string"
+                },
+                {
+                  "name": "Jwt__Key",
+                  "secretRef": "jwt-secret"
+                },
+                {
+                  "name": "Jwt__Issuer",
+                  "value": "InnomateApp"
+                },
+                {
+                  "name": "Jwt__Audience",
+                  "value": "InnomateAppUsers"
+                },
+                {
+                  "name": "ASPNETCORE_ENVIRONMENT",
+                  "value": "Production"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "Microsoft.App/managedEnvironments",
+      "apiVersion": "2023-05-01",
+      "name": "innomate-env",
+      "location": "[parameters('location')]",
+      "properties": {
+        "appLogsConfiguration": {
+          "destination": "log-analytics",
+          "logAnalyticsConfiguration": {
+            "customerId": "[reference(resourceId('Microsoft.OperationalInsights/workspaces', 'innomate-logs'), '2020-08-01').customerId]",
+            "sharedKey": "[listKeys(resourceId('Microsoft.OperationalInsights/workspaces', 'innomate-logs'), '2020-08-01').primarySharedKey]"
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces",
+      "apiVersion": "2020-08-01",
+      "name": "innomate-logs",
+      "location": "[parameters('location')]",
+      "properties": {
+        "sku": {
+          "name": "PerGB2018"
+        },
+        "retentionInDays": 30
+      }
+    }
+  ]
+}

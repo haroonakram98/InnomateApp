@@ -29,7 +29,7 @@ public class User : TenantEntity
             Username = username,
             Email = email,
             PasswordHash = passwordHash,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.Now
         };
         user.SetTenantId(tenantId);
         return user;

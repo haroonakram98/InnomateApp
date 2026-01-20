@@ -14,6 +14,7 @@ class CategoryService {
   async updateCategory(id: number, payload: UpdateCategoryDTO): Promise<CategoryDTO> {
     // Convert UpdateCategoryDTO to Partial<CategoryDTO> for the API
     const updatePayload: Partial<CategoryDTO> = {
+      categoryId: id,
       name: payload.name,
       description: payload.description
     };

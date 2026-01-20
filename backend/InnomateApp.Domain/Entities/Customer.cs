@@ -49,7 +49,7 @@ namespace InnomateApp.Domain.Entities
                 Phone = phone?.Trim(),
                 Email = email?.Trim(),
                 Address = address?.Trim(),
-                CreatedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.Now,
                 IsActive = true
             };
 

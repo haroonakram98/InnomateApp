@@ -1,4 +1,5 @@
 ﻿// Infrastructure/Repositories/SupplierRepository.cs
+using InnomateApp.Application.DTOs.Suppliers.Responses;
 using InnomateApp.Application.Interfaces;
 using InnomateApp.Domain.Entities;
 using InnomateApp.Infrastructure.Persistence;
@@ -116,6 +117,21 @@ namespace InnomateApp.Infrastructure.Repositories
                 .OrderByDescending(x => x.TotalAmount)
                 .Take(count)
                 .Select(x => x.Supplier)
+                .AsNoTracking()
+                .AsNoTracking()
+                .ToListAsync();
+        }
+
+        public async Task<IReadOnlyList<SupplierLookupResponse>> GetLookupAsync()
+        {
+            return await _context.Suppliers
+                .Where(s => s.IsActive)
+                .Select(s => new SupplierLookupResponse
+                {
+                    SupplierId = s.SupplierId,
+                    Name = s.Name,
+                    ContactPerson = s.ContactPerson
+                })
                 .AsNoTracking()
                 .ToListAsync();
         }

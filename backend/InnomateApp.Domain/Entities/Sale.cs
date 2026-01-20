@@ -62,8 +62,8 @@ namespace InnomateApp.Domain.Entities
                 InvoiceNo = invoiceNo,
                 CustomerId = customerId,
                 CreatedBy = createdBy,
-                SaleDate = DateTime.UtcNow,
-                CreatedAt = DateTime.UtcNow
+                SaleDate = DateTime.Now,
+                CreatedAt = DateTime.Now
             };
 
             sale.SetTenantId(tenantId);
@@ -107,7 +107,7 @@ namespace InnomateApp.Domain.Entities
             PaidAmount += amount;
             BalanceAmount = TotalAmount - PaidAmount;
             IsFullyPaid = BalanceAmount == 0;
-            UpdatedAt = DateTime.UtcNow;
+            UpdatedAt = DateTime.Now;
 
             _domainEvents.Add(new PaymentReceivedEvent(SaleId, new Money(amount), paymentMethod));
         }
@@ -130,7 +130,7 @@ namespace InnomateApp.Domain.Entities
         public void Delete()
         {
             IsDeleted = true;
-            DeletedAt = DateTime.UtcNow;
+            DeletedAt = DateTime.Now;
         }
 
         /// <summary>

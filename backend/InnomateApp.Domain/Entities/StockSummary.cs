@@ -24,7 +24,7 @@ namespace InnomateApp.Domain.Entities
             var summary = new StockSummary
             {
                 ProductId = productId,
-                LastUpdated = DateTime.UtcNow
+                LastUpdated = DateTime.Now
             };
 
             summary.SetTenantId(tenantId);
@@ -49,7 +49,7 @@ namespace InnomateApp.Domain.Entities
 
             Balance = TotalIn - TotalOut;
             TotalValue = Balance * AverageCost;
-            LastUpdated = DateTime.UtcNow;
+            LastUpdated = DateTime.Now;
         }
     }
 }

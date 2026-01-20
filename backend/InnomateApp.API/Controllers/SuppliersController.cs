@@ -1,97 +1,94 @@
-﻿// API/Controllers/SuppliersController.cs
-using InnomateApp.Application.DTOs.Requests;
-using InnomateApp.Application.Interfaces.IServices;
+﻿using InnomateApp.Application.DTOs.Suppliers.Requests;
+using InnomateApp.Application.Features.Suppliers.Commands.CreateSupplier;
+using InnomateApp.Application.Features.Suppliers.Commands.DeleteSupplier;
+using InnomateApp.Application.Features.Suppliers.Commands.UpdateSupplier;
+using InnomateApp.Application.Features.Suppliers.Commands.ToggleSupplierStatus;
+using InnomateApp.Application.Features.Suppliers.Queries.GetActiveSuppliers;
+using InnomateApp.Application.Features.Suppliers.Queries.GetAllSuppliers;
+using InnomateApp.Application.Features.Suppliers.Queries.GetSupplierById;
+using InnomateApp.Application.Features.Suppliers.Queries.GetSupplierLookup;
+using InnomateApp.Application.Features.Suppliers.Queries.GetSupplierWithPurchases;
+using InnomateApp.Application.Features.Suppliers.Queries.GetSupplierStats;
+using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Threading.Tasks;
 
 namespace InnomateApp.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class SuppliersController : ControllerBase
     {
-        private readonly ISupplierService _supplierService;
+        private readonly IMediator _mediator;
 
-        public SuppliersController(ISupplierService supplierService)
+        public SuppliersController(IMediator mediator)
         {
-            _supplierService = supplierService;
+            _mediator = mediator;
         }
 
         [HttpGet]
         public async Task<IActionResult> GetSuppliers([FromQuery] string search = null)
         {
-            var result = string.IsNullOrEmpty(search)
-                ? await _supplierService.GetAllSuppliersAsync()
-                : await _supplierService.SearchSuppliersAsync(search);
-
-            if (!result.IsSuccess)
-                return StatusCode(result.StatusCode, new { error = result.Error, validationErrors = result.Errors });
-
-            return Ok(result.Data);
+            var result = await _mediator.Send(new GetAllSuppliersQuery(search));
+            return Ok(result);
         }
 
         [HttpGet("active")]
         public async Task<IActionResult> GetActiveSuppliers()
         {
-            var result = await _supplierService.GetActiveSuppliersAsync();
-
-            if (!result.IsSuccess)
-                return StatusCode(result.StatusCode, new { error = result.Error });
-
-            return Ok(result.Data);
+            var result = await _mediator.Send(new GetActiveSuppliersQuery());
+            return Ok(result);
         }
 
-        [HttpGet("top")]
-        public async Task<IActionResult> GetTopSuppliers([FromQuery] int count = 10)
+        [HttpGet("lookup")]
+        public async Task<IActionResult> GetLookup()
         {
-            var result = await _supplierService.GetTopSuppliersAsync(count);
-
-            if (!result.IsSuccess)
-                return StatusCode(result.StatusCode, new { error = result.Error });
-
-            return Ok(result.Data);
+            var result = await _mediator.Send(new GetSupplierLookupQuery());
+            return Ok(result);
         }
 
-        [HttpGet("recent")]
-        public async Task<IActionResult> GetSuppliersWithRecentPurchases([FromQuery] int days = 30)
-        {
-            var result = await _supplierService.GetSuppliersWithRecentPurchasesAsync(days);
-
-            if (!result.IsSuccess)
-                return StatusCode(result.StatusCode, new { error = result.Error });
-
-            return Ok(result.Data);
-        }
-
-        [HttpGet("{id}")]
+        [HttpGet("{id:int}")]
         public async Task<IActionResult> GetSupplier(int id)
         {
-            var result = await _supplierService.GetSupplierByIdAsync(id);
+            var result = await _mediator.Send(new GetSupplierByIdQuery(id));
 
             if (!result.IsSuccess)
-                return StatusCode(result.StatusCode, new { error = result.Error });
+            {
+                return result.StatusCode == 404 
+                    ? NotFound(new { error = result.Error }) 
+                    : BadRequest(new { error = result.Error });
+            }
 
             return Ok(result.Data);
         }
 
-        [HttpGet("{id}/with-purchases")]
+        [HttpGet("{id:int}/with-purchases")]
         public async Task<IActionResult> GetSupplierWithPurchases(int id)
         {
-            var result = await _supplierService.GetSupplierWithPurchasesAsync(id);
+            var result = await _mediator.Send(new GetSupplierWithPurchasesQuery(id));
 
             if (!result.IsSuccess)
-                return StatusCode(result.StatusCode, new { error = result.Error });
+            {
+                return result.StatusCode == 404 
+                    ? NotFound(new { error = result.Error }) 
+                    : BadRequest(new { error = result.Error });
+            }
 
             return Ok(result.Data);
         }
 
-        [HttpGet("{id}/stats")]
+        [HttpGet("{id:int}/stats")]
         public async Task<IActionResult> GetSupplierStats(int id)
         {
-            var result = await _supplierService.GetSupplierStatsAsync(id);
+            var result = await _mediator.Send(new GetSupplierStatsQuery(id));
 
             if (!result.IsSuccess)
-                return StatusCode(result.StatusCode, new { error = result.Error });
+            {
+                 return result.StatusCode == 404 
+                    ? NotFound(new { error = result.Error }) 
+                    : BadRequest(new { error = result.Error });
+            }
 
             return Ok(result.Data);
         }
@@ -99,59 +96,59 @@ namespace InnomateApp.API.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateSupplier([FromBody] CreateSupplierRequest request)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
-            var result = await _supplierService.CreateSupplierAsync(request);
+            var result = await _mediator.Send(new CreateSupplierCommand(request));
 
             if (!result.IsSuccess)
             {
-                if (result.Errors?.Count > 0)
-                    return BadRequest(new { error = result.Error, validationErrors = result.Errors });
-
-                return StatusCode(result.StatusCode, new { error = result.Error });
+                return BadRequest(new { error = result.Error });
             }
 
             return CreatedAtAction(nameof(GetSupplier), new { id = result.Data.SupplierId }, result.Data);
         }
 
-        [HttpPut("{id}")]
+        [HttpPut("{id:int}")]
         public async Task<IActionResult> UpdateSupplier(int id, [FromBody] UpdateSupplierRequest request)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+            if (id != request.SupplierId) return BadRequest(new { error = "ID mismatch" });
 
-            var result = await _supplierService.UpdateSupplierAsync(id, request);
+            var result = await _mediator.Send(new UpdateSupplierCommand(request));
 
             if (!result.IsSuccess)
             {
-                if (result.Errors?.Count > 0)
-                    return BadRequest(new { error = result.Error, validationErrors = result.Errors });
-
-                return StatusCode(result.StatusCode, new { error = result.Error });
+                 return result.StatusCode == 404 
+                    ? NotFound(new { error = result.Error }) 
+                    : BadRequest(new { error = result.Error });
             }
 
             return Ok(result.Data);
         }
 
-        [HttpDelete("{id}")]
+        [HttpDelete("{id:int}")]
         public async Task<IActionResult> DeleteSupplier(int id)
         {
-            var result = await _supplierService.DeleteSupplierAsync(id);
+            var result = await _mediator.Send(new DeleteSupplierCommand(id));
 
             if (!result.IsSuccess)
-                return StatusCode(result.StatusCode, new { error = result.Error });
+            {
+                 return result.StatusCode == 404 
+                    ? NotFound(new { error = result.Error }) 
+                    : BadRequest(new { error = result.Error });
+            }
 
-            return Ok(new { message = "Supplier deleted successfully" });
+            return NoContent();
         }
 
-        [HttpPatch("{id}/toggle-status")]
+        [HttpPatch("{id:int}/toggle-status")]
         public async Task<IActionResult> ToggleSupplierStatus(int id)
         {
-            var result = await _supplierService.ToggleSupplierStatusAsync(id);
+            var result = await _mediator.Send(new ToggleSupplierStatusCommand(id));
 
             if (!result.IsSuccess)
-                return StatusCode(result.StatusCode, new { error = result.Error });
+            {
+                 return result.StatusCode == 404 
+                    ? NotFound(new { error = result.Error }) 
+                    : BadRequest(new { error = result.Error });
+            }
 
             return Ok(new
             {

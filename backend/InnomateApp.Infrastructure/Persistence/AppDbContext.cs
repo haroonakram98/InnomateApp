@@ -343,7 +343,7 @@ namespace InnomateApp.Infrastructure.Persistence
             // But since our entities have different property names (CreatedAt, UpdatedAt), 
             // we'll use a pragmatic approach or reflection.
             
-            var now = DateTime.UtcNow;
+            var now = DateTime.Now;
 
             // Common patterns in this codebase:
             var createdAtProp = entry.Metadata.FindProperty("CreatedAt");

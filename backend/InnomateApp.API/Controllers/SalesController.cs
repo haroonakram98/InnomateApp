@@ -1,5 +1,7 @@
 ﻿using InnomateApp.Application.DTOs.Sales.Requests;
 using InnomateApp.Application.Interfaces.Services;
+using MediatR;
+using InnomateApp.Application.Features.Sales.Commands.CreateSale;
 using Microsoft.AspNetCore.Mvc;
 
 namespace InnomateApp.API.Controllers
@@ -9,10 +11,12 @@ namespace InnomateApp.API.Controllers
     public class SalesController : ControllerBase
     {
         private readonly ISaleService _saleService;
+        private readonly IMediator _mediator;
 
-        public SalesController(ISaleService saleService)
+        public SalesController(ISaleService saleService, IMediator mediator)
         {
             _saleService = saleService;
+            _mediator = mediator;
         }
 
         [HttpGet]
@@ -29,8 +33,16 @@ namespace InnomateApp.API.Controllers
         public async Task<IActionResult> Create([FromBody] CreateSaleRequest request)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
-            var created = await _saleService.CreateAsync(request);
-            return CreatedAtAction(nameof(GetById), new { id = created.SaleId }, created);
+            
+            var command = new CreateSaleCommand { SaleDto = request };
+            var result = await _mediator.Send(command);
+
+
+            if (result.IsSuccess)
+            {
+               return CreatedAtAction(nameof(GetById), new { id = result.Data }, result.Data);
+            }
+            return BadRequest(result.Error);
         }
 
         [HttpPut("{id:int}")]

@@ -31,5 +31,25 @@ namespace InnomateApp.Domain.Entities
             category.SetTenantId(tenantId);
             return category;
         }
+
+        /// <summary>
+        /// Update category details
+        /// </summary>
+        public void Update(string name, string? description)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                throw new BusinessRuleViolationException("Category name is required");
+
+            Name = name.Trim();
+            Description = description?.Trim();
+        }
+
+        /// <summary>
+        /// Check if category can be deleted
+        /// </summary>
+        public bool CanDelete()
+        {
+            return Products == null || !Products.Any();
+        }
     }
 }

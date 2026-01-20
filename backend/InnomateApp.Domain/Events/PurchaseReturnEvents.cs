@@ -15,7 +15,7 @@ namespace InnomateApp.Domain.Events
         {
             PurchaseId = purchaseId;
             TotalAmount = totalAmount;
-            OccurredOn = DateTime.UtcNow;
+            OccurredOn = DateTime.Now;
         }
     }
 
@@ -34,7 +34,7 @@ namespace InnomateApp.Domain.Events
             ReturnId = returnId;
             SaleId = saleId;
             TotalRefund = totalRefund;
-            OccurredOn = DateTime.UtcNow;
+            OccurredOn = DateTime.Now;
         }
     }
 }

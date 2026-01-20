@@ -12,4 +12,5 @@ public interface IUserRepository
     Task<User> UpdateUserAsync(User user);
     Task<bool> DeleteUserAsync(User user);
     Task UpdateLastLoginAsync(int userId, DateTime timestamp);
+    Task<User?> GetUserByIdIgnoreFilterAsync(int id);
 }

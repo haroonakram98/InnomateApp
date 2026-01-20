@@ -1,0 +1,66 @@
+services:
+  # SQL Server Database
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2017-latest
+    container_name: innomate-sqlserver
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=Innomate@123
+      - MSSQL_PID=Express
+      - MSSQL_TCP_PORT=1433
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+      - ./scripts:/docker-entrypoint-initdb.d
+    networks:
+      - innomate-network
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd", "-S", "localhost", "-U", "sa", "-P", "Innomate@123", "-Q", "SELECT 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # Backend API
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: innomate-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Server=innomate-sqlserver,1433;Database=InnomateCore;User Id=sa;Password=Innomate@123;TrustServerCertificate=True;
+      - Jwt__Key=super_secret_jwt_signing_key_for_production_123!
+      - Jwt__Issuer=InnomateApp
+      - Jwt__Audience=InnomateAppUsers
+    depends_on:
+      - sqlserver
+    networks:
+      - innomate-network
+    restart: unless-stopped
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend/innomateapp-ui
+      dockerfile: Dockerfile
+    container_name: innomate-frontend
+    ports:
+      - "3000:80"
+    volumes:
+      - ./frontend/innomateapp-ui/nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - backend
+    networks:
+      - innomate-network
+    restart: unless-stopped
+
+volumes:
+  sqlserver_data:
+
+networks:
+  innomate-network:
+    driver: bridge

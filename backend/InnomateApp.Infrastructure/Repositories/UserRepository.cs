@@ -65,5 +65,11 @@ namespace InnomateApp.Infrastructure.Repositories
             user.LastLoginAt = timestamp;
             await Task.CompletedTask;
         }
+        public async Task<User?> GetUserByIdIgnoreFilterAsync(int id)
+        {
+            return await _context.Users
+                .IgnoreQueryFilters()  // This will ignore all query filters
+                .FirstOrDefaultAsync(u => u.UserId == id);
+        }
     }
 }

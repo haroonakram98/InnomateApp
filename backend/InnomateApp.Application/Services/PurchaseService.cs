@@ -84,7 +84,7 @@ namespace InnomateApp.Application.Services
                 }
 
                 purchase.Status = "Pending";
-                purchase.CreatedAt = DateTime.UtcNow;
+                purchase.CreatedAt = DateTime.Now;
 
                 // Calculate totals
                 purchase.CalculateTotal();
@@ -138,7 +138,7 @@ namespace InnomateApp.Application.Services
                         Quantity = detail.Quantity,
                         UnitCost = detail.UnitCost,
                         TotalCost = detail.TotalCost,
-                        CreatedAt = DateTime.UtcNow,
+                        CreatedAt = DateTime.Now,
                         Reference = $"PUR-{purchase.InvoiceNo}",
                         Notes = $"Purchase receipt - {purchase.InvoiceNo}",
                         ReferenceId = purchase.PurchaseId
@@ -154,7 +154,7 @@ namespace InnomateApp.Application.Services
                         Balance = detail.Quantity,
                         AverageCost = detail.UnitCost,
                         TotalValue = detail.TotalCost,
-                        LastUpdated = DateTime.UtcNow
+                        LastUpdated = DateTime.Now
                     });
                 }
 

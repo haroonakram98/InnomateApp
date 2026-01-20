@@ -26,7 +26,7 @@ namespace InnomateApp.Domain.Entities
                 Amount = amount,
                 PaymentMethod = paymentMethod,
                 ReferenceNo = referenceNo,
-                PaymentDate = DateTime.UtcNow
+                PaymentDate = DateTime.Now
             };
 
             payment.SetTenantId(tenantId);

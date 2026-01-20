@@ -21,7 +21,7 @@ namespace InnomateApp.Application.Common.Validators
 
             // Expiry date validation (optional but good practice)
             RuleFor(x => x.ExpiryDate)
-                .Must(date => date == null || date > DateTime.UtcNow)
+                .Must(date => date == null || date > DateTime.Now)
                 .WithMessage("Expiry date must be in the future")
                 .When(x => x.ExpiryDate.HasValue);
         }
@@ -36,7 +36,7 @@ namespace InnomateApp.Application.Common.Validators
 
             RuleFor(x => x.PurchaseDate)
                 .NotEmpty().WithMessage("Purchase date is required")
-                .LessThanOrEqualTo(DateTime.UtcNow.AddMinutes(5)).WithMessage("Purchase date cannot be in the future");
+                .LessThanOrEqualTo(DateTime.Now.AddMinutes(5)).WithMessage("Purchase date cannot be in the future");
 
             RuleFor(x => x.CreatedBy)
                 .GreaterThan(0).WithMessage("Creator ID is required");
