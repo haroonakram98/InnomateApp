@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace InnomateApp.Application.DTOs
 {
@@ -14,11 +11,9 @@ namespace InnomateApp.Application.DTOs
         public decimal TotalIn { get; set; }
         public decimal TotalOut { get; set; }
         public decimal Balance { get; set; }
-        public DateTime LastUpdated { get; set; }
         public decimal AverageCost { get; set; }
         public decimal TotalValue { get; set; }
-
-        public decimal StockQuanitity { get; set; }
+        public DateTime LastUpdated { get; set; }
     }
 
     public class StockTransactionDto
@@ -27,17 +22,18 @@ namespace InnomateApp.Application.DTOs
         public int TransactionId { get; set; }
         public int ProductId { get; set; }
         public string ProductName { get; set; } = string.Empty;
-        public string TransactionType { get; set; } = string.Empty;
+        public string TransactionType { get; set; } = string.Empty; // "P", "S", "A"
         public int ReferenceId { get; set; }
         public decimal Quantity { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public decimal TotalCost { get; set; }
         public decimal UnitCost { get; set; }
+        public decimal TotalCost { get; set; }
+        public DateTime CreatedAt { get; set; }
+
         public string TransactionTypeName => TransactionType switch
         {
-            "I" => "Purchase",
-            "O" => "Sale",
-            "R" => "Adjustment",
+            "P" => "Purchase",
+            "S" => "Sale",
+            "A" => "Adjustment",
             _ => "Unknown"
         };
     }
@@ -59,7 +55,16 @@ namespace InnomateApp.Application.DTOs
         public int ReferenceId { get; set; }
         public decimal Quantity { get; set; }
         public decimal UnitCost { get; set; }
-        public DateTime TransactionDate { get; set; } = DateTime.Now;
+        public DateTime TransactionDate { get; set; } = DateTime.UtcNow;
+        public string? Notes { get; set; }
+    }
+
+    public class FIFOSaleRequestDto
+    {
+        public int ProductId { get; set; }
+        public decimal Quantity { get; set; }
+        public int SaleReferenceId { get; set; }
+        public string? Notes { get; set; }
     }
 
     public class FIFOSaleResultDto
@@ -80,6 +85,7 @@ namespace InnomateApp.Application.DTOs
         public decimal UnitCost { get; set; }
         public decimal TotalCost { get; set; }
     }
+
     public class StockValidationResult
     {
         public bool IsValid { get; set; }

@@ -1,4 +1,4 @@
-// api/customers/index.ts
+// api/customerApi.ts
 import axios from "@/lib/utils/axios.js";
 import {
   CustomerDTO,
@@ -7,13 +7,14 @@ import {
 } from "@/types/customer.js";
 
 export const customerApi = {
-  getAll: async (): Promise<CustomerDTO[]> => {
-    const { data } = await axios.get<CustomerDTO[]>("/Customer");
+  getAll: async (search?: string): Promise<CustomerDTO[]> => {
+    const { data } = await axios.get<CustomerDTO[]>("/Customer", {
+      params: { search }
+    });
     return data;
   },
 
   getById: async (id: number): Promise<CustomerDTO> => {
-    // Fixed missing slash & plural issue
     const { data } = await axios.get<CustomerDTO>(`/Customer/${id}`);
     return data;
   },
@@ -33,5 +34,10 @@ export const customerApi = {
 
   delete: async (id: number): Promise<void> => {
     await axios.delete(`/Customer/${id}`);
+  },
+
+  toggleStatus: async (id: number): Promise<{ isActive: boolean }> => {
+    const { data } = await axios.patch(`/Customer/${id}/toggle-status`);
+    return data;
   },
 };

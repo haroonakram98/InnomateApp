@@ -1,45 +1,79 @@
 ﻿using InnomateApp.Application.DTOs;
-using InnomateApp.Application.Interfaces;
-using Microsoft.AspNetCore.Http;
+using InnomateApp.Application.Features.Categories.Commands;
+using InnomateApp.Application.Features.Categories.Queries;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace InnomateApp.API.Controllers
 {
-    
     [Route("api/[controller]")]
     [ApiController]
     public class CategoriesController : ControllerBase
     {
-        private readonly ICategoryService _service;
+        private readonly IMediator _mediator;
 
-        public CategoriesController(ICategoryService service)
+        public CategoriesController(IMediator mediator)
         {
-            _service = service;
+            _mediator = mediator;
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll() =>
-            Ok(await _service.GetAllAsync());
+        public async Task<IActionResult> GetAll([FromQuery] string? search)
+        {
+            var result = await _mediator.Send(new GetCategoriesQuery { Search = search });
+            return result.IsSuccess ? Ok(result.Data) : BadRequest(result.Error);
+        }
+
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
-            var result = await _service.GetByIdAsync(id);
-            if (result == null) return NotFound();
-            return Ok(result);
+            var result = await _mediator.Send(new GetCategoryByIdQuery(id));
+            if (!result.IsSuccess)
+                return result.Error.Contains("not found") ? NotFound() : BadRequest(result.Error);
+
+            return Ok(result.Data);
         }
 
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateCategoryDto dto)
         {
-            try
-            {
-                var created = await _service.CreateAsync(dto);
-                return CreatedAtAction(nameof(GetById), new { id = created.CategoryId }, created);
-            }
-            catch(Exception ex)
-            {
-                return BadRequest(new { error = ex.Message });
-            }
+            var result = await _mediator.Send(new CreateCategoryCommand { CategoryDto = dto });
+            if (!result.IsSuccess)
+                return BadRequest(result.Error);
+
+            return CreatedAtAction(nameof(GetById), new { id = result.Data.CategoryId }, result.Data);
+        }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(int id, [FromBody] UpdateCategoryDto dto)
+        {
+            var result = await _mediator.Send(new UpdateCategoryCommand { Id = id, CategoryDto = dto });
+            if (!result.IsSuccess)
+                return result.Error.Contains("not found") ? NotFound() : BadRequest(result.Error);
+
+            return Ok(result.Data);
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var result = await _mediator.Send(new DeleteCategoryCommand(id));
+            if (!result.IsSuccess)
+                return result.Error.Contains("not found") ? NotFound() : BadRequest(result.Error);
+
+            return NoContent();
+        }
+
+        [HttpPatch("{id}/toggle-status")]
+        public async Task<IActionResult> ToggleStatus(int id)
+        {
+            var result = await _mediator.Send(new ToggleCategoryStatusCommand(id));
+            if (!result.IsSuccess)
+                return result.Error.Contains("not found") ? NotFound() : BadRequest(result.Error);
+
+            return Ok(new { isActive = result.Data });
         }
     }
 }

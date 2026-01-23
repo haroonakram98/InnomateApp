@@ -1,8 +1,10 @@
 ﻿using InnomateApp.Application.DTOs;
-using InnomateApp.Application.Interfaces;
-using InnomateApp.Application.Services;
-using Microsoft.AspNetCore.Http.HttpResults;
+using InnomateApp.Application.Features.Products.Commands;
+using InnomateApp.Application.Features.Products.Queries;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace InnomateApp.API.Controllers
 {
@@ -10,60 +12,55 @@ namespace InnomateApp.API.Controllers
     [Route("api/[controller]")]
     public class ProductController : ControllerBase
     {
-        private readonly IProductService _service;
+        private readonly IMediator _mediator;
 
-        public ProductController(IProductService service)
+        public ProductController(IMediator mediator)
         {
-            _service = service;
+            _mediator = mediator;
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll() =>
-            Ok(await _service.GetAllAsync());
+        public async Task<IActionResult> GetAll([FromQuery] string? search)
+        {
+            var result = await _mediator.Send(new GetProductsQuery { Search = search });
+            return result.IsSuccess ? Ok(result.Data) : BadRequest(result.Error);
+        }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
-            var result = await _service.GetByIdAsync(id);
-            return result == null ? NotFound() : Ok(result);
+            var result = await _mediator.Send(new GetProductByIdQuery(id));
+            return result.IsSuccess ? Ok(result.Data) : NotFound(result.Error);
         }
 
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateProductDto dto)
         {
-            var created = await _service.CreateAsync(dto);
-            return CreatedAtAction(nameof(GetById), new { id = created.ProductId }, created);
+            var result = await _mediator.Send(new CreateProductCommand { CreateDto = dto });
+            return result.IsSuccess ? CreatedAtAction(nameof(GetById), new { id = result.Data.ProductId }, result.Data) : BadRequest(result.Error);
         }
 
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, [FromBody] UpdateProductDto dto)
         {
-            if (id != dto.ProductId) return BadRequest();
-            var updatedProduct = await _service.UpdateAsync(dto);
-            return Ok(updatedProduct);
+            if (id != dto.ProductId) return BadRequest("Property ID mismatch");
+            
+            var result = await _mediator.Send(new UpdateProductCommand { UpdateDto = dto });
+            return result.IsSuccess ? Ok(result.Data) : BadRequest(result.Error);
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            try
-            {
-                await _service.DeactivateAsync(id);
-                return NoContent();
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return NotFound(ex.Message);
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(ex.Message);
-            }
+            var result = await _mediator.Send(new DeactivateProductCommand(id));
+            return result.IsSuccess ? NoContent() : BadRequest(result.Error);
         }
+
         [HttpGet("for-sale")]
-        public async Task<IActionResult> ForSales() =>
-            Ok(await _service.GetProductsForSale());
-
-
+        public async Task<IActionResult> GetForSale()
+        {
+            var result = await _mediator.Send(new GetProductsForSaleQuery());
+            return result.IsSuccess ? Ok(result.Data) : BadRequest(result.Error);
+        }
     }
 }

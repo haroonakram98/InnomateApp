@@ -131,9 +131,11 @@ namespace InnomateApp.Application.Services
             {
                 ProductId = p.StockSummary.ProductId,
                 Balance = p.StockSummary.Balance,
-                StockQuanitity = p.StockSummary.TotalIn - p.StockSummary.TotalOut
-
-                // add other fields if you have them (Opening, In, Out, etc.)
+                TotalIn = p.StockSummary.TotalIn,
+                TotalOut = p.StockSummary.TotalOut,
+                AverageCost = p.StockSummary.AverageCost,
+                TotalValue = p.StockSummary.TotalValue,
+                LastUpdated = p.StockSummary.LastUpdated
             }
             }).ToList();
         }

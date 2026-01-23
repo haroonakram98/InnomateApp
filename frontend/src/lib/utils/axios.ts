@@ -39,28 +39,21 @@ instance.interceptors.response.use(
     // Handle common HTTP errors
     switch (status) {
       case 400:
-        console.warn("Bad Request:", data?.message || "Invalid request.");
+        console.warn("Bad Request:", data?.detail || data?.message || "Invalid request.");
         break;
       case 401:
         console.warn("Unauthorized. Logging out...");
-        useAuthStore.getState().logout?.(); // optional auto logout
-        break;
-      case 403:
-        console.warn("Forbidden:", data?.message || "Access denied.");
-        break;
-      case 404:
-        console.warn("Not Found:", data?.message || "Requested resource not found.");
+        useAuthStore.getState().logout?.();
         break;
       case 500:
-        console.error("Server Error:", data?.message || "An unexpected error occurred.");
+        console.error("Server Error:", data?.detail || data?.message || "An unexpected error occurred.");
         break;
-      default:
-        console.error("Unhandled Error:", data?.message || "Something went wrong.");
     }
 
-    // Normalize error shape for UI
+    // Normalize error shape for UI (Support ProblemDetails and legacy message)
     return Promise.reject({
-      message: data?.message || "An unexpected error occurred.",
+      message: data?.detail || data?.message || "An unexpected error occurred.",
+      errors: data?.errors || null, // Capture structured validation errors
       status,
     });
   }

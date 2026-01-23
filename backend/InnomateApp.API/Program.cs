@@ -58,13 +58,10 @@ builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IProductService, ProductService>();
-builder.Services.AddScoped<ICategoryService, CategoryService>();
-builder.Services.AddScoped<ICustomerService, CustomerService>();
 builder.Services.AddScoped<ISaleService, SaleService>();
 builder.Services.AddScoped<IStockService, StockService>();
 builder.Services.AddScoped<IFifoService, FifoService>();
 builder.Services.AddScoped<IPurchaseService, PurchaseService>();
-builder.Services.AddScoped<ISupplierService, SupplierService>();
 builder.Services.AddScoped<IReturnService, ReturnService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<ITenantService, TenantService>();
@@ -131,8 +128,16 @@ builder.Services.AddAuthentication("Bearer")
 builder.Services.AddAuthorization();
 
 // CORS
-var allowedOrigins = builder.Configuration["AllowedOrigins"]?.Split(',') 
-                     ?? new[] { "http://localhost:5173" };
+var allowedOrigins = builder.Configuration["AllowedOrigins"]
+                        ?.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                        .Select(o => o.Trim())
+                        .ToArray() 
+                     ?? new[] { "http://localhost:5173", "https://localhost:5173" };
+
+if (allowedOrigins.Length > 0)
+{
+    Log.Information("CORS Allowed Origins: {Origins}", string.Join(", ", allowedOrigins));
+}
 
 builder.Services.AddCors(options =>
 {
@@ -141,7 +146,8 @@ builder.Services.AddCors(options =>
         {
             policy.WithOrigins(allowedOrigins)
                   .AllowAnyHeader()
-                  .AllowAnyMethod();
+                  .AllowAnyMethod()
+                  .WithExposedHeaders("Content-Disposition"); // Useful for file downloads
         });
 });
 
@@ -149,6 +155,9 @@ builder.Services.AddCors(options =>
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+// MediatR
+builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(MappingProfile).Assembly));
 
 // FluentValidation
 builder.Services.AddValidatorsFromAssemblyContaining<CreatePurchaseDtoValidator>();

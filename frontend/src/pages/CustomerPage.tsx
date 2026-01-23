@@ -17,15 +17,25 @@ import {
   useCustomers,
   useCustomersLoading,
   useCustomersError,
+  useValidationErrors,
   useCustomerActions
-} from '@/store/usecustomerStore.js';
+} from '@/store/useCustomerStore.js';
 
 export default function CustomerPage() {
   const { isDark } = useTheme();
   const customers = useCustomers();
   const isLoading = useCustomersLoading();
   const error = useCustomersError();
-  const { fetchCustomers, createCustomer, updateCustomer, deleteCustomer, clearError } = useCustomerActions();
+  const validationErrors = useValidationErrors();
+  const {
+    fetchCustomers,
+    createCustomer,
+    updateCustomer,
+    deleteCustomer,
+    toggleCustomerStatus,
+    setValidationErrors,
+    clearError
+  } = useCustomerActions();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [editingCustomer, setEditingCustomer] = useState<CustomerDTO | null>(null);
@@ -140,8 +150,8 @@ export default function CustomerPage() {
           </p>
         </div>
 
-        {/* Error Alert */}
-        {error && (
+        {/* Error Alert - Only show if modal is NOT open */}
+        {error && !isCreating && !editingCustomer && (
           <div className={`mb-4 p-4 rounded-lg border ${isDark ? 'bg-red-900/20 border-red-800 text-red-200' : 'bg-red-50 border-red-200 text-red-700'
             }`}>
             <div className="flex justify-between items-start">
@@ -193,8 +203,9 @@ export default function CustomerPage() {
           <div className={`grid grid-cols-12 gap-4 px-6 py-3 border-b text-sm font-semibold ${theme.bgSecondary} ${theme.border} ${theme.text}`}>
             <div className="col-span-2">CUSTOMER ID</div>
             <div className="col-span-2">NAME</div>
-            <div className="col-span-3">EMAIL</div>
-            <div className="col-span-3">PHONE</div>
+            <div className="col-span-2">EMAIL</div>
+            <div className="col-span-2">PHONE</div>
+            <div className="col-span-2 text-center">STATUS</div>
             <div className="col-span-2 text-center">ACTIONS</div>
           </div>
 
@@ -225,8 +236,8 @@ export default function CustomerPage() {
                 <div
                   key={customer.customerId}
                   className={`grid grid-cols-12 gap-4 px-6 py-4 border-b transition-colors ${index % 2 === 0
-                      ? isDark ? 'bg-gray-800' : 'bg-white'
-                      : isDark ? 'bg-gray-750' : 'bg-gray-50'
+                    ? isDark ? 'bg-gray-800' : 'bg-white'
+                    : isDark ? 'bg-gray-750' : 'bg-gray-50'
                     } ${theme.borderLight} ${theme.bgHover}`}
                 >
                   <div className={`col-span-2 text-sm font-medium ${theme.text}`}>
@@ -235,11 +246,22 @@ export default function CustomerPage() {
                   <div className={`col-span-2 text-sm ${theme.text}`}>
                     {customer.name}
                   </div>
-                  <div className={`col-span-3 text-sm ${theme.textSecondary}`}>
+                  <div className={`col-span-2 text-sm ${theme.textSecondary}`}>
                     {customer.email || 'N/A'}
                   </div>
-                  <div className={`col-span-3 text-sm ${theme.textSecondary}`}>
+                  <div className={`col-span-2 text-sm ${theme.textSecondary}`}>
                     {customer.phone || 'N/A'}
+                  </div>
+                  <div className="col-span-2 flex justify-center">
+                    <button
+                      onClick={() => toggleCustomerStatus(customer.customerId)}
+                      className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${customer.isActive
+                          ? isDark ? 'bg-green-900/30 text-green-400 hover:bg-green-900/50' : 'bg-green-100 text-green-700 hover:bg-green-200'
+                          : isDark ? 'bg-red-900/30 text-red-400 hover:bg-red-900/50' : 'bg-red-100 text-red-700 hover:bg-red-200'
+                        }`}
+                    >
+                      {customer.isActive ? 'Active' : 'Inactive'}
+                    </button>
                   </div>
                   <div className="col-span-2 flex justify-center gap-3">
                     <button
@@ -276,8 +298,8 @@ export default function CustomerPage() {
                     onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                     disabled={currentPage === 1}
                     className={`p-2 rounded border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${isDark
-                        ? 'border-gray-600 hover:bg-gray-700'
-                        : 'border-gray-300 hover:bg-gray-100'
+                      ? 'border-gray-600 hover:bg-gray-700'
+                      : 'border-gray-300 hover:bg-gray-100'
                       }`}
                   >
                     <ChevronLeft size={16} className={theme.text} />
@@ -289,8 +311,8 @@ export default function CustomerPage() {
                     onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                     disabled={currentPage === totalPages}
                     className={`p-2 rounded border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${isDark
-                        ? 'border-gray-600 hover:bg-gray-700'
-                        : 'border-gray-300 hover:bg-gray-100'
+                      ? 'border-gray-600 hover:bg-gray-700'
+                      : 'border-gray-300 hover:bg-gray-100'
                       }`}
                   >
                     <ChevronRight size={16} className={theme.text} />

@@ -249,16 +249,6 @@ export default function SalesPage() {
               </button>
             )}
           </div>
-          <div className="flex items-center gap-3">
-
-            <button
-              onClick={handleAdd}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${theme.buttonPrimary}`}
-            >
-              <Plus size={20} />
-              New Sale
-            </button>
-          </div>
         </div>
 
         {/* Table */}

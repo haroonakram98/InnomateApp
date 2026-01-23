@@ -1,10 +1,16 @@
-// api/categories/index.ts
+// api/categories.ts
 import axios from "@/lib/utils/axios.js";
-import { CategoryDTO, CreateCategoryDTO } from "@/types/category.js";
+import {
+  CategoryDTO,
+  CreateCategoryDTO,
+  UpdateCategoryDTO
+} from "@/types/category.js";
 
 export const categoryApi = {
-  getAll: async (): Promise<CategoryDTO[]> => {
-    const { data } = await axios.get<CategoryDTO[]>("/categories");
+  getAll: async (search?: string): Promise<CategoryDTO[]> => {
+    const { data } = await axios.get<CategoryDTO[]>("/categories", {
+      params: { search }
+    });
     return data;
   },
 
@@ -18,12 +24,17 @@ export const categoryApi = {
     return data;
   },
 
-  update: async (id: number, payload: Partial<CategoryDTO>): Promise<CategoryDTO> => {
+  update: async (id: number, payload: UpdateCategoryDTO): Promise<CategoryDTO> => {
     const { data } = await axios.put<CategoryDTO>(`/categories/${id}`, payload);
     return data;
   },
 
   delete: async (id: number): Promise<void> => {
     await axios.delete(`/categories/${id}`);
+  },
+
+  toggleStatus: async (id: number): Promise<{ isActive: boolean }> => {
+    const { data } = await axios.patch(`/categories/${id}/toggle-status`);
+    return data;
   },
 };

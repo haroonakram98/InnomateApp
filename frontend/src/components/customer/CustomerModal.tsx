@@ -1,8 +1,14 @@
 import { useState, useEffect } from 'react';
 import { CustomerDTO, CreateCustomerDto, UpdateCustomerDto } from '@/types/customer.js';
 import { useTheme } from '@/hooks/useTheme.js';
-import { useCustomerActions } from '@/store/usecustomerStore.js';
+import {
+    useCustomerActions,
+    useValidationErrors,
+    useCustomersError
+} from '@/store/useCustomerStore.js';
 import { X } from 'lucide-react';
+import { customerSchema } from '@/lib/schemas/customerSchema.js';
+import { z } from 'zod';
 
 interface CustomerModalProps {
     isOpen: boolean;
@@ -13,7 +19,15 @@ interface CustomerModalProps {
 
 export default function CustomerModal({ isOpen, onClose, customerToEdit, onSuccess }: CustomerModalProps) {
     const { isDark } = useTheme();
-    const { createCustomer, updateCustomer } = useCustomerActions();
+    const error = useCustomersError();
+    const validationErrors = useValidationErrors();
+    const {
+        createCustomer,
+        updateCustomer,
+        setValidationErrors,
+        clearError
+    } = useCustomerActions();
+
     const [formData, setFormData] = useState<CreateCustomerDto>({
         name: '',
         email: '',
@@ -24,6 +38,7 @@ export default function CustomerModal({ isOpen, onClose, customerToEdit, onSucce
     // Reset form when modal opens or customerToEdit changes
     useEffect(() => {
         if (isOpen) {
+            clearError();
             if (customerToEdit) {
                 setFormData({
                     name: customerToEdit.name,
@@ -40,12 +55,45 @@ export default function CustomerModal({ isOpen, onClose, customerToEdit, onSucce
                 });
             }
         }
-    }, [isOpen, customerToEdit]);
+    }, [isOpen, customerToEdit, clearError]);
+
+    // Live validation: Clear errors as user fixes them
+    useEffect(() => {
+        if (validationErrors) {
+            const result = customerSchema.safeParse(formData);
+            if (result.success) {
+                setValidationErrors(null);
+            } else {
+                const formattedErrors: Record<string, string[]> = {};
+                result.error.errors.forEach((err) => {
+                    const path = err.path.join('.');
+                    if (!formattedErrors[path]) formattedErrors[path] = [];
+                    formattedErrors[path].push(err.message);
+                });
+                setValidationErrors(formattedErrors);
+            }
+        }
+    }, [formData, setValidationErrors]);
+
+    const getFieldError = (fieldName: string) => {
+        if (!validationErrors) return null;
+        const lower = fieldName.toLowerCase();
+        const capitalized = fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+
+        const err =
+            validationErrors[lower] ||
+            validationErrors[capitalized] ||
+            validationErrors[`CustomerDto.${capitalized}`] ||
+            validationErrors[`CustomerDto.${lower}`];
+
+        return err ? err[0] : null;
+    };
 
     const handleSubmit = async () => {
-        if (!formData.name.trim()) return;
-
         try {
+            // 🕵️‍♂️ Client Side Validation with Zod
+            customerSchema.parse(formData);
+
             if (customerToEdit) {
                 const updatePayload: UpdateCustomerDto = {
                     customerId: customerToEdit.customerId,
@@ -54,26 +102,22 @@ export default function CustomerModal({ isOpen, onClose, customerToEdit, onSucce
                     phone: formData.phone || undefined,
                     address: formData.address || undefined
                 };
-                const updated = await updateCustomer(customerToEdit.customerId, updatePayload);
-                if (onSuccess && updated) onSuccess(updated);
+                await updateCustomer(customerToEdit.customerId, updatePayload);
             } else {
-                const createPayload: CreateCustomerDto = {
-                    name: formData.name,
-                    email: formData.email || undefined,
-                    phone: formData.phone || undefined,
-                    address: formData.address || undefined
-                };
-                const created = await createCustomer(createPayload);
-                if (onSuccess && created) onSuccess(created);
+                await createCustomer(formData);
             }
             onClose();
-        } catch (error) {
-            console.error("Failed to save customer", error);
-            // Error is usually handled by the store/toast, but we keep modal open on error ideally? 
-            // The current store implementation seems to handle errors globally or we might want to close only on success.
-            // Assuming store actions return the object on success and throw on error.
-            // If store doesn't return the object, we might need to fetch the last created one or rely on store state.
-            // Based on typical patterns here, let's assume it throws on error so we don't close.
+        } catch (err) {
+            if (err instanceof z.ZodError) {
+                const formattedErrors: Record<string, string[]> = {};
+                err.errors.forEach((error) => {
+                    const path = error.path.join('.');
+                    if (!formattedErrors[path]) formattedErrors[path] = [];
+                    formattedErrors[path].push(error.message);
+                });
+                setValidationErrors(formattedErrors);
+            }
+            // Server errors are handled by the store
         }
     };
 
@@ -106,6 +150,14 @@ export default function CustomerModal({ isOpen, onClose, customerToEdit, onSucce
                 </div>
 
                 <div className="p-6 space-y-4">
+                    {/* Modal Error Summary */}
+                    {error && !validationErrors && (
+                        <div className={`p-3 rounded-lg text-xs border ${isDark ? 'bg-red-900/20 border-red-800 text-red-200' : 'bg-red-50 border-red-200 text-red-700'
+                            }`}>
+                            {error}
+                        </div>
+                    )}
+
                     <div>
                         <label className={`block text-sm font-medium mb-1 ${theme.text}`}>
                             Customer Name *
@@ -114,10 +166,14 @@ export default function CustomerModal({ isOpen, onClose, customerToEdit, onSucce
                             type="text"
                             value={formData.name}
                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${theme.input}`}
+                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${getFieldError('Name') ? 'border-red-500 focus:ring-red-500' : theme.input
+                                }`}
                             placeholder="Enter customer name"
                             autoFocus
                         />
+                        {getFieldError('Name') && (
+                            <p className="mt-1 text-xs text-red-500">{getFieldError('Name')}</p>
+                        )}
                     </div>
 
                     <div>
@@ -128,9 +184,13 @@ export default function CustomerModal({ isOpen, onClose, customerToEdit, onSucce
                             type="email"
                             value={formData.email}
                             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${theme.input}`}
+                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${getFieldError('Email') ? 'border-red-500 focus:ring-red-500' : theme.input
+                                }`}
                             placeholder="Enter email address (optional)"
                         />
+                        {getFieldError('Email') && (
+                            <p className="mt-1 text-xs text-red-500">{getFieldError('Email')}</p>
+                        )}
                     </div>
 
                     <div>
@@ -141,9 +201,13 @@ export default function CustomerModal({ isOpen, onClose, customerToEdit, onSucce
                             type="tel"
                             value={formData.phone}
                             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${theme.input}`}
+                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${getFieldError('Phone') ? 'border-red-500 focus:ring-red-500' : theme.input
+                                }`}
                             placeholder="Enter phone number (optional)"
                         />
+                        {getFieldError('Phone') && (
+                            <p className="mt-1 text-xs text-red-500">{getFieldError('Phone')}</p>
+                        )}
                     </div>
 
                     <div>
@@ -154,18 +218,20 @@ export default function CustomerModal({ isOpen, onClose, customerToEdit, onSucce
                             value={formData.address}
                             onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                             rows={3}
-                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none ${theme.input}`}
+                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none ${getFieldError('Address') ? 'border-red-500 focus:ring-red-500' : theme.input
+                                }`}
                             placeholder="Enter address (optional)"
                         />
+                        {getFieldError('Address') && (
+                            <p className="mt-1 text-xs text-red-500">{getFieldError('Address')}</p>
+                        )}
                     </div>
-
                 </div>
 
                 <div className={`flex space-x-3 p-6 border-t ${theme.border}`}>
                     <button
                         onClick={handleSubmit}
-                        disabled={!formData.name.trim()}
-                        className={`flex-1 py-2 px-4 rounded-lg transition-colors disabled:opacity-50 ${theme.buttonPrimary}`}
+                        className={`flex-1 py-2 px-4 rounded-lg transition-colors ${theme.buttonPrimary}`}
                     >
                         {customerToEdit ? 'Update Customer' : 'Create Customer'}
                     </button>

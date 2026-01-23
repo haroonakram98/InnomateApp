@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 namespace InnomateApp.Domain.Entities
 {
     /// <summary>
-    /// Customer entity with business logic
+    /// Customer entity with centralized business logic (Single Source of Truth)
     /// </summary>
     public class Customer : TenantEntity
     {
@@ -12,7 +12,7 @@ namespace InnomateApp.Domain.Entities
         public int CustomerId { get; set; }
         
         [Required, MaxLength(200)]
-        public string Name { get; set; } = string.Empty;
+        public string Name { get; set; } = null!;
         
         [MaxLength(20)]
         public string? Phone { get; set; }
@@ -24,30 +24,27 @@ namespace InnomateApp.Domain.Entities
         public string? Address { get; set; }
         
         public DateTime CreatedAt { get; set; }
+        public DateTime? UpdatedAt { get; set; }
         public bool IsActive { get; set; } = true;
 
         // Navigation
-        public ICollection<Sale> Sales { get; set; } = new List<Sale>();
+        public virtual ICollection<Sale> Sales { get; set; } = new List<Sale>();
 
         public Customer() { }
 
         /// <summary>
-        /// Factory method to create a new customer
+        /// Domain Factory Method - Centralized rules for creating a customer.
         /// </summary>
         public static Customer Create(int tenantId, string name, string? phone = null, string? email = null, string? address = null)
         {
             if (string.IsNullOrWhiteSpace(name))
-                throw new BusinessRuleViolationException("Customer name is required");
-
-            // Validate email format if provided
-            if (!string.IsNullOrWhiteSpace(email) && !IsValidEmail(email))
-                throw new BusinessRuleViolationException("Invalid email format");
+                throw new BusinessRuleViolationException("Domain Rule: Customer name is required");
 
             var customer = new Customer
             {
                 Name = name.Trim(),
                 Phone = phone?.Trim(),
-                Email = email?.Trim(),
+                Email = email?.Trim()?.ToLower(),
                 Address = address?.Trim(),
                 CreatedAt = DateTime.UtcNow,
                 IsActive = true
@@ -58,61 +55,42 @@ namespace InnomateApp.Domain.Entities
         }
 
         /// <summary>
-        /// Update customer details
+        /// Update customer details with validation
         /// </summary>
         public void Update(string name, string? phone = null, string? email = null, string? address = null)
         {
             if (string.IsNullOrWhiteSpace(name))
-                throw new BusinessRuleViolationException("Customer name is required");
-
-            if (!string.IsNullOrWhiteSpace(email) && !IsValidEmail(email))
-                throw new BusinessRuleViolationException("Invalid email format");
+                throw new BusinessRuleViolationException("Domain Rule: Customer name is required");
 
             Name = name.Trim();
             Phone = phone?.Trim();
-            Email = email?.Trim();
+            Email = email?.Trim()?.ToLower();
             Address = address?.Trim();
+            UpdatedAt = DateTime.UtcNow;
         }
 
-        /// <summary>
-        /// Deactivate the customer
-        /// </summary>
         public void Deactivate()
         {
             IsActive = false;
+            UpdatedAt = DateTime.UtcNow;
         }
 
-        /// <summary>
-        /// Activate the customer
-        /// </summary>
         public void Activate()
         {
             IsActive = true;
+            UpdatedAt = DateTime.UtcNow;
         }
 
-        /// <summary>
-        /// Validate customer can make purchases
-        /// </summary>
+        public void ToggleStatus()
+        {
+            IsActive = !IsActive;
+            UpdatedAt = DateTime.UtcNow;
+        }
+
         public void ValidateForSale()
         {
             if (!IsActive)
-                throw new InactiveEntityException(nameof(Customer), CustomerId);
-        }
-
-        /// <summary>
-        /// Simple email validation
-        /// </summary>
-        private static bool IsValidEmail(string email)
-        {
-            try
-            {
-                var addr = new System.Net.Mail.MailAddress(email);
-                return addr.Address == email;
-            }
-            catch
-            {
-                return false;
-            }
+                throw new BusinessRuleViolationException($"Customer {Name} is inactive and cannot perform purchases.");
         }
     }
 }

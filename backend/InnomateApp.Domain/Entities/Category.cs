@@ -13,6 +13,10 @@ namespace InnomateApp.Domain.Entities
         
         public string? Description { get; set; }
 
+        public DateTime CreatedAt { get; set; }
+        public DateTime? UpdatedAt { get; set; }
+        public bool IsActive { get; set; } = true;
+
         public ICollection<Product> Products { get; set; } = new List<Product>();
 
         public Category() { }
@@ -25,11 +29,29 @@ namespace InnomateApp.Domain.Entities
             var category = new Category
             {
                 Name = name.Trim(),
-                Description = description
+                Description = description?.Trim(),
+                CreatedAt = DateTime.UtcNow,
+                IsActive = true
             };
 
             category.SetTenantId(tenantId);
             return category;
+        }
+
+        public void Update(string name, string? description = null)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                throw new BusinessRuleViolationException("Category name is required");
+
+            Name = name.Trim();
+            Description = description?.Trim();
+            UpdatedAt = DateTime.UtcNow;
+        }
+
+        public void ToggleStatus()
+        {
+            IsActive = !IsActive;
+            UpdatedAt = DateTime.UtcNow;
         }
     }
 }

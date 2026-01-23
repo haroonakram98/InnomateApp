@@ -1,11 +1,11 @@
 // src/services/supplierService.ts
 import api from "@/lib/utils/axios.js"
-import { 
-  SupplierDTO, 
-  CreateSupplierDTO, 
-  UpdateSupplierDTO, 
+import {
+  SupplierDTO,
+  CreateSupplierDTO,
+  UpdateSupplierDTO,
   SupplierWithStatsDTO,
-  SupplierDetailDto 
+  SupplierDetailDto
 } from '@/types/supplier.js';
 
 export const supplierService = {

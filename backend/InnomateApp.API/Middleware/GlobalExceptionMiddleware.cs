@@ -55,6 +55,19 @@ namespace InnomateApp.API.Middleware
                     problemDetails.Detail = exception.Message;
                     break;
 
+                case FluentValidation.ValidationException validationException:
+                    response.StatusCode = (int)HttpStatusCode.BadRequest;
+                    problemDetails.Status = (int)HttpStatusCode.BadRequest;
+                    problemDetails.Title = "Validation Error";
+                    problemDetails.Detail = "One or more validation failures occurred.";
+                    problemDetails.Extensions["errors"] = validationException.Errors
+                        .GroupBy(e => e.PropertyName)
+                        .ToDictionary(
+                            g => g.Key,
+                            g => g.Select(x => x.ErrorMessage).ToArray()
+                        );
+                    break;
+
                 case ArgumentException:
                 case InvalidOperationException:
                 case InnomateApp.Domain.Common.BusinessRuleViolationException:

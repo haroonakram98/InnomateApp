@@ -18,6 +18,8 @@ namespace InnomateApp.Application.DTOs
         public bool IsActive { get; set; }
         public decimal DefaultSalePrice { get; set; }
         public StockSummaryDto? StockSummary { get; set; }
+        public decimal StockBalance => StockSummary?.Balance ?? 0;
+        public decimal TotalValue => StockSummary?.TotalValue ?? 0;
     }
 
     public class ProductStockDto : ProductDto

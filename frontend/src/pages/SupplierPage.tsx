@@ -19,15 +19,18 @@ import {
   Filter
 } from 'lucide-react';
 import { SupplierDTO, CreateSupplierDTO, UpdateSupplierDTO } from '@/types/supplier.js';
+import { supplierSchema } from '@/lib/schemas/supplierSchema.js';
+import { z } from 'zod';
 import { useTheme } from '@/hooks/useTheme.js';
 import MainLayout from '@/components/layout/MainLayout.js';
-import { 
-  useSuppliers, 
-  useSuppliersLoading, 
+import {
+  useSuppliers,
+  useSuppliersLoading,
   useSuppliersError,
+  useValidationErrors,
   useSupplierDetail,
   useSupplierStats,
-  useSupplierActions 
+  useSupplierActions
 } from '@/store/useSupplierStore.js';
 
 export default function SupplierPage() {
@@ -35,17 +38,19 @@ export default function SupplierPage() {
   const suppliers = useSuppliers();
   const isLoading = useSuppliersLoading();
   const error = useSuppliersError();
+  const validationErrors = useValidationErrors();
   const supplierDetail = useSupplierDetail();
   const supplierStats = useSupplierStats();
-  const { 
-    fetchSuppliers, 
-    createSupplier, 
-    updateSupplier, 
-    deleteSupplier, 
+  const {
+    fetchSuppliers,
+    createSupplier,
+    updateSupplier,
+    deleteSupplier,
     toggleSupplierStatus,
     fetchSupplierDetail,
     fetchSupplierStats,
-    clearError 
+    setValidationErrors,
+    clearError
   } = useSupplierActions();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -71,21 +76,21 @@ export default function SupplierPage() {
     bgCard: isDark ? 'bg-gray-800' : 'bg-white',
     bgSecondary: isDark ? 'bg-gray-700' : 'bg-gray-50',
     bgHover: isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100',
-    
+
     text: isDark ? 'text-gray-100' : 'text-gray-900',
     textSecondary: isDark ? 'text-gray-400' : 'text-gray-600',
     textMuted: isDark ? 'text-gray-500' : 'text-gray-500',
-    
+
     border: isDark ? 'border-gray-700' : 'border-gray-200',
     borderLight: isDark ? 'border-gray-600' : 'border-gray-100',
-    
-    input: isDark 
-      ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400 focus:border-blue-500' 
+
+    input: isDark
+      ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400 focus:border-blue-500'
       : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-blue-500',
-    
+
     buttonPrimary: 'bg-blue-600 hover:bg-blue-700 text-white',
-    buttonSecondary: isDark 
-      ? 'bg-gray-700 hover:bg-gray-600 text-gray-100' 
+    buttonSecondary: isDark
+      ? 'bg-gray-700 hover:bg-gray-600 text-gray-100'
       : 'bg-gray-200 hover:bg-gray-300 text-gray-700',
   };
 
@@ -108,15 +113,15 @@ export default function SupplierPage() {
 
   // Filter suppliers
   const filteredSuppliers = suppliers.filter(supplier => {
-    const matchesSearch = 
+    const matchesSearch =
       supplier.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       supplier.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       supplier.phone.includes(searchQuery) ||
       supplier.contactPerson?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       supplier.address?.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesStatus = 
-      statusFilter === 'all' || 
+    const matchesStatus =
+      statusFilter === 'all' ||
       (statusFilter === 'active' && supplier.isActive) ||
       (statusFilter === 'inactive' && !supplier.isActive);
 
@@ -133,36 +138,69 @@ export default function SupplierPage() {
   const totalSuppliersCount = suppliers.length;
 
   // Handlers
-  const handleCreateSupplier = async () => {
-    if (!formData.name || !formData.email || !formData.phone) {
-      alert('Please fill in required fields: Name, Email, and Phone');
-      return;
+  // Live validation: Clear errors as the user fixes them
+  useEffect(() => {
+    if (validationErrors) {
+      const result = supplierSchema.safeParse(formData);
+      if (result.success) {
+        setValidationErrors(null);
+      } else {
+        const formattedErrors: Record<string, string[]> = {};
+        result.error.errors.forEach((error) => {
+          const path = error.path.join('.');
+          if (!formattedErrors[path]) formattedErrors[path] = [];
+          formattedErrors[path].push(error.message);
+        });
+        setValidationErrors(formattedErrors);
+      }
     }
+  }, [formData, setValidationErrors]);
 
+  const handleCreateSupplier = async () => {
     try {
+      // 🕵️‍♂️ Client Side Validation with Zod
+      supplierSchema.parse(formData);
+
       await createSupplier(formData);
       resetForm();
       setIsCreating(false);
-    } catch (error) {
-      // Error handled by store
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        // Transform Zod errors to our flat structure
+        const formattedErrors: Record<string, string[]> = {};
+        err.errors.forEach((error) => {
+          const path = error.path.join('.');
+          if (!formattedErrors[path]) formattedErrors[path] = [];
+          formattedErrors[path].push(error.message);
+        });
+        setValidationErrors(formattedErrors);
+      }
     }
   };
 
   const handleUpdateSupplier = async () => {
-    if (!editingSupplier || !formData.name || !formData.email || !formData.phone) {
-      alert('Please fill in required fields: Name, Email, and Phone');
-      return;
-    }
+    if (!editingSupplier) return;
 
     try {
+      // 🕵️‍♂️ Client Side Validation with Zod
+      supplierSchema.parse(formData);
+
       await updateSupplier(editingSupplier.supplierId, {
         ...formData,
         supplierId: editingSupplier.supplierId
       });
       resetForm();
       setEditingSupplier(null);
-    } catch (error) {
-      // Error handled by store
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        const formattedErrors: Record<string, string[]> = {};
+        err.errors.forEach((error) => {
+          const path = error.path.join('.');
+          if (!formattedErrors[path]) formattedErrors[path] = [];
+          formattedErrors[path].push(error.message);
+        });
+        setValidationErrors(formattedErrors);
+      }
     }
   };
 
@@ -240,6 +278,22 @@ export default function SupplierPage() {
     clearError();
   };
 
+  const getFieldError = (fieldName: string) => {
+    if (!validationErrors) return null;
+
+    // Check various common naming conventions to be safe
+    const lower = fieldName.toLowerCase();
+    const capitalized = fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+
+    const error =
+      validationErrors[lower] ||
+      validationErrors[capitalized] ||
+      validationErrors[`SupplierDto.${capitalized}`] ||
+      validationErrors[`SupplierDto.${lower}`];
+
+    return error ? error[0] : null;
+  };
+
   return (
     <MainLayout>
       <div className={`h-full flex flex-col p-6 ${theme.bg}`}>
@@ -251,18 +305,16 @@ export default function SupplierPage() {
           </p>
         </div>
 
-        {/* Error Alert */}
-        {error && (
-          <div className={`mb-4 p-4 rounded-lg border ${
-            isDark ? 'bg-red-900/20 border-red-800 text-red-200' : 'bg-red-50 border-red-200 text-red-700'
-          }`}>
+        {/* Error Alert - Only show if modal is NOT open to avoid redundancy */}
+        {error && !isCreating && !editingSupplier && (
+          <div className={`mb-4 p-4 rounded-lg border ${isDark ? 'bg-red-900/20 border-red-800 text-red-200' : 'bg-red-50 border-red-200 text-red-700'
+            }`}>
             <div className="flex justify-between items-start">
               <span>{error}</span>
               <button
                 onClick={handleClearError}
-                className={`p-1 rounded ${
-                  isDark ? 'hover:bg-red-800' : 'hover:bg-red-100'
-                }`}
+                className={`p-1 rounded ${isDark ? 'hover:bg-red-800' : 'hover:bg-red-100'
+                  }`}
               >
                 <X size={16} />
               </button>
@@ -324,9 +376,8 @@ export default function SupplierPage() {
               {searchQuery && (
                 <button
                   onClick={clearSearch}
-                  className={`absolute right-2 top-1/2 transform -translate-y-1/2 p-1 rounded ${
-                    isDark ? 'hover:bg-gray-600' : 'hover:bg-gray-200'
-                  }`}
+                  className={`absolute right-2 top-1/2 transform -translate-y-1/2 p-1 rounded ${isDark ? 'hover:bg-gray-600' : 'hover:bg-gray-200'
+                    }`}
                 >
                   <X size={14} className={theme.textMuted} />
                 </button>
@@ -377,7 +428,7 @@ export default function SupplierPage() {
                 <Building size={48} className="mb-2 opacity-50" />
                 <p>No suppliers found</p>
                 {searchQuery && (
-                  <button 
+                  <button
                     onClick={clearSearch}
                     className="mt-2 text-blue-500 hover:text-blue-700 text-sm"
                   >
@@ -389,11 +440,10 @@ export default function SupplierPage() {
               currentSuppliers.map((supplier, index) => (
                 <div
                   key={supplier.supplierId}
-                  className={`grid grid-cols-12 gap-4 px-6 py-4 border-b transition-colors ${
-                    index % 2 === 0 
-                      ? isDark ? 'bg-gray-800' : 'bg-white' 
-                      : isDark ? 'bg-gray-750' : 'bg-gray-50'
-                  } ${theme.borderLight} ${theme.bgHover}`}
+                  className={`grid grid-cols-12 gap-4 px-6 py-4 border-b transition-colors ${index % 2 === 0
+                    ? isDark ? 'bg-gray-800' : 'bg-white'
+                    : isDark ? 'bg-gray-750' : 'bg-gray-50'
+                    } ${theme.borderLight} ${theme.bgHover}`}
                 >
                   <div className="col-span-3">
                     <div className={`font-medium ${theme.text}`}>{supplier.name}</div>
@@ -401,7 +451,7 @@ export default function SupplierPage() {
                       {supplier.address || 'No address'}
                     </div>
                   </div>
-                  
+
                   <div className="col-span-2">
                     <div className="flex items-center gap-1 mb-1">
                       <Mail size={14} className={theme.textMuted} />
@@ -412,19 +462,18 @@ export default function SupplierPage() {
                       <span className={`text-sm ${theme.text}`}>{supplier.phone}</span>
                     </div>
                   </div>
-                  
+
                   <div className={`col-span-2 text-sm ${theme.text}`}>
                     {supplier.contactPerson || 'Not specified'}
                   </div>
-                  
+
                   <div className="col-span-2">
                     <button
                       onClick={() => handleToggleStatus(supplier)}
-                      className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                        supplier.isActive
-                          ? 'bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900 dark:text-green-200'
-                          : 'bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300'
-                      }`}
+                      className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium transition-colors ${supplier.isActive
+                        ? 'bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900 dark:text-green-200'
+                        : 'bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300'
+                        }`}
                     >
                       {supplier.isActive ? (
                         <ToggleRight size={16} className="text-green-600" />
@@ -434,33 +483,30 @@ export default function SupplierPage() {
                       {supplier.isActive ? 'Active' : 'Inactive'}
                     </button>
                   </div>
-                  
+
                   <div className="col-span-3 flex justify-center gap-2">
                     <button
                       onClick={() => handleViewSupplier(supplier)}
-                      className={`p-1 rounded transition-colors ${
-                        isDark ? 'text-blue-400 hover:text-blue-300 hover:bg-gray-700' : 'text-blue-600 hover:text-blue-800 hover:bg-gray-100'
-                      }`}
+                      className={`p-1 rounded transition-colors ${isDark ? 'text-blue-400 hover:text-blue-300 hover:bg-gray-700' : 'text-blue-600 hover:text-blue-800 hover:bg-gray-100'
+                        }`}
                       title="View Details"
                     >
                       <BarChart3 size={18} />
                     </button>
-                    
+
                     <button
                       onClick={() => startEdit(supplier)}
-                      className={`p-1 rounded transition-colors ${
-                        isDark ? 'text-green-400 hover:text-green-300 hover:bg-gray-700' : 'text-green-600 hover:text-green-800 hover:bg-gray-100'
-                      }`}
+                      className={`p-1 rounded transition-colors ${isDark ? 'text-green-400 hover:text-green-300 hover:bg-gray-700' : 'text-green-600 hover:text-green-800 hover:bg-gray-100'
+                        }`}
                       title="Edit"
                     >
                       <Edit2 size={18} />
                     </button>
-                    
+
                     <button
                       onClick={() => handleDeleteSupplier(supplier)}
-                      className={`p-1 rounded transition-colors ${
-                        isDark ? 'text-red-400 hover:text-red-300 hover:bg-gray-700' : 'text-red-600 hover:text-red-800 hover:bg-gray-100'
-                      }`}
+                      className={`p-1 rounded transition-colors ${isDark ? 'text-red-400 hover:text-red-300 hover:bg-gray-700' : 'text-red-600 hover:text-red-800 hover:bg-gray-100'
+                        }`}
                       title="Delete"
                     >
                       <Trash2 size={18} />
@@ -482,11 +528,10 @@ export default function SupplierPage() {
                   <button
                     onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                     disabled={currentPage === 1}
-                    className={`p-2 rounded border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                      isDark 
-                        ? 'border-gray-600 hover:bg-gray-700' 
-                        : 'border-gray-300 hover:bg-gray-100'
-                    }`}
+                    className={`p-2 rounded border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${isDark
+                      ? 'border-gray-600 hover:bg-gray-700'
+                      : 'border-gray-300 hover:bg-gray-100'
+                      }`}
                   >
                     <ChevronLeft size={16} className={theme.text} />
                   </button>
@@ -496,11 +541,10 @@ export default function SupplierPage() {
                   <button
                     onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                     disabled={currentPage === totalPages}
-                    className={`p-2 rounded border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                      isDark 
-                        ? 'border-gray-600 hover:bg-gray-700' 
-                        : 'border-gray-300 hover:bg-gray-100'
-                    }`}
+                    className={`p-2 rounded border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${isDark
+                      ? 'border-gray-600 hover:bg-gray-700'
+                      : 'border-gray-300 hover:bg-gray-100'
+                      }`}
                   >
                     <ChevronRight size={16} className={theme.text} />
                   </button>
@@ -521,6 +565,13 @@ export default function SupplierPage() {
               </div>
 
               <div className="p-6 space-y-4">
+                {/* Modal Error Summary (Hidden if specific field errors exist to keep it clean) */}
+                {error && !validationErrors && (
+                  <div className={`p-3 rounded-lg text-xs border ${isDark ? 'bg-red-900/20 border-red-800 text-red-200' : 'bg-red-50 border-red-200 text-red-700'
+                    }`}>
+                    {error}
+                  </div>
+                )}
                 <div>
                   <label className={`block text-sm font-medium mb-1 ${theme.text}`}>
                     Supplier Name *
@@ -529,9 +580,13 @@ export default function SupplierPage() {
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${theme.input}`}
+                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${getFieldError('Name') ? 'border-red-500 focus:ring-red-500' : theme.input
+                      }`}
                     placeholder="Enter supplier name"
                   />
+                  {getFieldError('Name') && (
+                    <p className="mt-1 text-xs text-red-500">{getFieldError('Name')}</p>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -543,9 +598,13 @@ export default function SupplierPage() {
                       type="email"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${theme.input}`}
+                      className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${getFieldError('Email') ? 'border-red-500 focus:ring-red-500' : theme.input
+                        }`}
                       placeholder="email@example.com"
                     />
+                    {getFieldError('Email') && (
+                      <p className="mt-1 text-xs text-red-500">{getFieldError('Email')}</p>
+                    )}
                   </div>
 
                   <div>
@@ -556,9 +615,13 @@ export default function SupplierPage() {
                       type="tel"
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${theme.input}`}
+                      className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${getFieldError('Phone') ? 'border-red-500 focus:ring-red-500' : theme.input
+                        }`}
                       placeholder="Phone number"
                     />
+                    {getFieldError('Phone') && (
+                      <p className="mt-1 text-xs text-red-500">{getFieldError('Phone')}</p>
+                    )}
                   </div>
                 </div>
 
@@ -570,9 +633,13 @@ export default function SupplierPage() {
                     type="text"
                     value={formData.contactPerson}
                     onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
-                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${theme.input}`}
+                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${getFieldError('ContactPerson') ? 'border-red-500 focus:ring-red-500' : theme.input
+                      }`}
                     placeholder="Contact person name"
                   />
+                  {getFieldError('ContactPerson') && (
+                    <p className="mt-1 text-xs text-red-500">{getFieldError('ContactPerson')}</p>
+                  )}
                 </div>
 
                 <div>
@@ -583,9 +650,13 @@ export default function SupplierPage() {
                     value={formData.address}
                     onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                     rows={2}
-                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none ${theme.input}`}
+                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none ${getFieldError('Address') ? 'border-red-500 focus:ring-red-500' : theme.input
+                      }`}
                     placeholder="Supplier address"
                   />
+                  {getFieldError('Address') && (
+                    <p className="mt-1 text-xs text-red-500">{getFieldError('Address')}</p>
+                  )}
                 </div>
 
                 <div>
@@ -596,16 +667,19 @@ export default function SupplierPage() {
                     value={formData.notes}
                     onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                     rows={2}
-                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none ${theme.input}`}
+                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none ${getFieldError('Notes') ? 'border-red-500 focus:ring-red-500' : theme.input
+                      }`}
                     placeholder="Additional notes (optional)"
                   />
+                  {getFieldError('Notes') && (
+                    <p className="mt-1 text-xs text-red-500">{getFieldError('Notes')}</p>
+                  )}
                 </div>
               </div>
 
               <div className={`flex space-x-3 p-6 border-t ${theme.border}`}>
                 <button
                   onClick={editingSupplier ? handleUpdateSupplier : handleCreateSupplier}
-                  disabled={!formData.name || !formData.email || !formData.phone}
                   className={`flex-1 py-2 px-4 rounded-lg transition-colors disabled:opacity-50 ${theme.buttonPrimary}`}
                 >
                   {editingSupplier ? 'Update Supplier' : 'Create Supplier'}
@@ -632,9 +706,8 @@ export default function SupplierPage() {
                   </h3>
                   <button
                     onClick={() => setViewingSupplier(null)}
-                    className={`p-1 rounded ${
-                      isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
-                    }`}
+                    className={`p-1 rounded ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+                      }`}
                   >
                     <X size={20} />
                   </button>
@@ -646,7 +719,7 @@ export default function SupplierPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
                     <h4 className={`text-md font-semibold ${theme.text}`}>Basic Information</h4>
-                    
+
                     <div className="space-y-3">
                       <div className="flex items-center gap-3">
                         <Building className={`h-5 w-5 ${theme.textSecondary}`} />
@@ -684,11 +757,10 @@ export default function SupplierPage() {
 
                       <div>
                         <p className={`text-sm font-medium ${theme.text}`}>Status</p>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1 ${
-                          viewingSupplier.isActive
-                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                            : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-                        }`}>
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1 ${viewingSupplier.isActive
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                          : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                          }`}>
                           {viewingSupplier.isActive ? 'Active' : 'Inactive'}
                         </span>
                       </div>
@@ -697,7 +769,7 @@ export default function SupplierPage() {
 
                   <div className="space-y-4">
                     <h4 className={`text-md font-semibold ${theme.text}`}>Additional Information</h4>
-                    
+
                     <div className="space-y-3">
                       {viewingSupplier.address && (
                         <div className="flex items-start gap-3">
@@ -760,7 +832,7 @@ export default function SupplierPage() {
                       </div>
                       <div className={`p-3 rounded-lg ${isDark ? 'bg-gray-700' : 'bg-gray-50'}`}>
                         <p className={`text-sm font-medium ${theme.text}`}>
-                          {(supplierDetail?.lastPurchaseDate || supplierStats?.lastPurchaseDate) 
+                          {(supplierDetail?.lastPurchaseDate || supplierStats?.lastPurchaseDate)
                             ? new Date(supplierDetail?.lastPurchaseDate || supplierStats?.lastPurchaseDate!).toLocaleDateString()
                             : 'Never'
                           }
@@ -777,9 +849,8 @@ export default function SupplierPage() {
                     <h4 className={`text-md font-semibold mb-3 ${theme.text}`}>Recent Purchases</h4>
                     <div className="space-y-2">
                       {supplierDetail.recentPurchases.slice(0, 5).map((purchase) => (
-                        <div key={purchase.purchaseId} className={`flex justify-between items-center p-3 rounded ${
-                          isDark ? 'bg-gray-700' : 'bg-gray-50'
-                        }`}>
+                        <div key={purchase.purchaseId} className={`flex justify-between items-center p-3 rounded ${isDark ? 'bg-gray-700' : 'bg-gray-50'
+                          }`}>
                           <div>
                             <div className={`font-medium ${theme.text}`}>{purchase.purchaseNumber}</div>
                             <div className={`text-sm ${theme.textSecondary}`}>

@@ -24,7 +24,8 @@ docker-compose up -d sqlserver
 ### Step 2: Start Backend (New Terminal)
 ```bash
 cd backend/InnomateApp.API
-dotnet watch run
+cd backend/InnomateApp.API
+dotnet watch run --launch-profile https
 ```
 
 ### Step 3: Start Frontend (New Terminal)
@@ -40,6 +41,8 @@ npm run dev
 - **Frontend**: http://localhost:5173 ⚡ Instant updates
 - **Backend**: https://localhost:7219/swagger 🔄 Auto-restart
 - **Database**: localhost:1433 🐳 Docker
+
+> **⚠️ Start Here:** If you see "Network Error" or "CORS Error", open [https://localhost:7219/swagger](https://localhost:7219/swagger) in your browser and click **"Advanced" -> "Proceed"** to accept the development certificate.
 
 ---
 

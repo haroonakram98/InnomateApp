@@ -1,6 +1,9 @@
 ﻿// API/Controllers/SuppliersController.cs
+using InnomateApp.Application.DTOs;
 using InnomateApp.Application.DTOs.Requests;
-using InnomateApp.Application.Interfaces.IServices;
+using InnomateApp.Application.Features.Suppliers.Commands;
+using InnomateApp.Application.Features.Suppliers.Queries;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using System.Threading.Tasks;
 
@@ -10,22 +13,20 @@ namespace InnomateApp.API.Controllers
     [Route("api/[controller]")]
     public class SuppliersController : ControllerBase
     {
-        private readonly ISupplierService _supplierService;
+        private readonly IMediator _mediator;
 
-        public SuppliersController(ISupplierService supplierService)
+        public SuppliersController(IMediator mediator)
         {
-            _supplierService = supplierService;
+            _mediator = mediator;
         }
 
         [HttpGet]
         public async Task<IActionResult> GetSuppliers([FromQuery] string search = null)
         {
-            var result = string.IsNullOrEmpty(search)
-                ? await _supplierService.GetAllSuppliersAsync()
-                : await _supplierService.SearchSuppliersAsync(search);
+            var result = await _mediator.Send(new GetSuppliersQuery { SearchTerm = search });
 
             if (!result.IsSuccess)
-                return StatusCode(result.StatusCode, new { error = result.Error, validationErrors = result.Errors });
+                return StatusCode(result.StatusCode, new { error = result.Error });
 
             return Ok(result.Data);
         }
@@ -33,7 +34,7 @@ namespace InnomateApp.API.Controllers
         [HttpGet("active")]
         public async Task<IActionResult> GetActiveSuppliers()
         {
-            var result = await _supplierService.GetActiveSuppliersAsync();
+            var result = await _mediator.Send(new GetSuppliersQuery { ActiveOnly = true });
 
             if (!result.IsSuccess)
                 return StatusCode(result.StatusCode, new { error = result.Error });
@@ -44,7 +45,7 @@ namespace InnomateApp.API.Controllers
         [HttpGet("top")]
         public async Task<IActionResult> GetTopSuppliers([FromQuery] int count = 10)
         {
-            var result = await _supplierService.GetTopSuppliersAsync(count);
+            var result = await _mediator.Send(new GetTopSuppliersQuery { Count = count });
 
             if (!result.IsSuccess)
                 return StatusCode(result.StatusCode, new { error = result.Error });
@@ -55,7 +56,7 @@ namespace InnomateApp.API.Controllers
         [HttpGet("recent")]
         public async Task<IActionResult> GetSuppliersWithRecentPurchases([FromQuery] int days = 30)
         {
-            var result = await _supplierService.GetSuppliersWithRecentPurchasesAsync(days);
+            var result = await _mediator.Send(new GetSuppliersWithRecentPurchasesQuery { Days = days });
 
             if (!result.IsSuccess)
                 return StatusCode(result.StatusCode, new { error = result.Error });
@@ -66,7 +67,7 @@ namespace InnomateApp.API.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetSupplier(int id)
         {
-            var result = await _supplierService.GetSupplierByIdAsync(id);
+            var result = await _mediator.Send(new GetSupplierByIdQuery { Id = id });
 
             if (!result.IsSuccess)
                 return StatusCode(result.StatusCode, new { error = result.Error });
@@ -77,7 +78,7 @@ namespace InnomateApp.API.Controllers
         [HttpGet("{id}/with-purchases")]
         public async Task<IActionResult> GetSupplierWithPurchases(int id)
         {
-            var result = await _supplierService.GetSupplierWithPurchasesAsync(id);
+            var result = await _mediator.Send(new GetSupplierWithPurchasesQuery { Id = id });
 
             if (!result.IsSuccess)
                 return StatusCode(result.StatusCode, new { error = result.Error });
@@ -88,7 +89,7 @@ namespace InnomateApp.API.Controllers
         [HttpGet("{id}/stats")]
         public async Task<IActionResult> GetSupplierStats(int id)
         {
-            var result = await _supplierService.GetSupplierStatsAsync(id);
+            var result = await _mediator.Send(new GetSupplierStatsQuery { Id = id });
 
             if (!result.IsSuccess)
                 return StatusCode(result.StatusCode, new { error = result.Error });
@@ -97,12 +98,9 @@ namespace InnomateApp.API.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateSupplier([FromBody] CreateSupplierRequest request)
+        public async Task<IActionResult> CreateSupplier([FromBody] CreateSupplierDto dto)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
-            var result = await _supplierService.CreateSupplierAsync(request);
+            var result = await _mediator.Send(new CreateSupplierCommand { SupplierDto = dto });
 
             if (!result.IsSuccess)
             {
@@ -116,12 +114,9 @@ namespace InnomateApp.API.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateSupplier(int id, [FromBody] UpdateSupplierRequest request)
+        public async Task<IActionResult> UpdateSupplier(int id, [FromBody] UpdateSupplierDto dto)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
-            var result = await _supplierService.UpdateSupplierAsync(id, request);
+            var result = await _mediator.Send(new UpdateSupplierCommand { Id = id, SupplierDto = dto });
 
             if (!result.IsSuccess)
             {
@@ -137,7 +132,7 @@ namespace InnomateApp.API.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteSupplier(int id)
         {
-            var result = await _supplierService.DeleteSupplierAsync(id);
+            var result = await _mediator.Send(new DeleteSupplierCommand { Id = id });
 
             if (!result.IsSuccess)
                 return StatusCode(result.StatusCode, new { error = result.Error });
@@ -148,7 +143,7 @@ namespace InnomateApp.API.Controllers
         [HttpPatch("{id}/toggle-status")]
         public async Task<IActionResult> ToggleSupplierStatus(int id)
         {
-            var result = await _supplierService.ToggleSupplierStatusAsync(id);
+            var result = await _mediator.Send(new ToggleSupplierStatusCommand { Id = id });
 
             if (!result.IsSuccess)
                 return StatusCode(result.StatusCode, new { error = result.Error });

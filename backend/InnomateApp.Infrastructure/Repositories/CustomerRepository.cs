@@ -23,7 +23,13 @@ namespace InnomateApp.Infrastructure.Repositories
         {
             return await _context.Customers.FirstOrDefaultAsync(c => c.Email == email);
         }
-        
+
+        public async Task<bool> ExistsAsync(string name, string phone)
+        {
+            return await _context.Customers.AnyAsync(c => 
+                c.Name.Trim().ToLower() == name.Trim().ToLower() || 
+                (!string.IsNullOrEmpty(phone) && c.Phone == phone));
+        }
 
         public async Task<int> CountAsync()
         {
